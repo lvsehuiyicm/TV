@@ -1,0 +1,33 @@
+name: Build mobile APK
+
+on:
+  push:
+    branches: [fongmi]
+    paths:
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Install Android SDK 37
+        run: |
+          SDK_DIR="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          echo "SDK_DIR=$SDK_DIR"
+          yes | "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" "build-tools;37.0.0"
+      - name: Build mobile debug APK
+        run: ./gradlew :app:assembleMobileDebug --stacktrace
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-mobile-debug
+          path: app/build/outputs/apk/mobile/debug/*.apk
+          if-no-files-found: error
