@@ -97,8 +97,14 @@ jobs:
           git clone --depth 1 --branch fongmi https://github.com/FongMi/mpv-android.git "$MPA"
           git clone --depth 1 --branch fongmi https://github.com/FongMi/mpv.git "$MPA/buildscripts/deps/mpv"
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends autoconf pkgconf libtool ninja-build cmake python3-pip gperf nasm patch ant meson
-          sudo pip3 install --break-system-packages meson || echo "pip meson install failed, using apt meson"
+          sudo apt-get install -y --no-install-recommends autoconf pkgconf libtool ninja-build cmake python3-pip gperf nasm patch ant
+          python3 -m pip install --upgrade "meson>=1.11.0"
+          echo "meson: $(which meson) $(meson --version)"
+          MESON_VER="$(meson --version)"
+          if [ "$(printf '%s\n%s\n' "1.11.0" "$MESON_VER" | sort -V | head -n 1)" != "1.11.0" ]; then
+            echo "::error::meson $MESON_VER is older than 1.11.0 (fontconfig requires >= 1.11.0)"
+            exit 1
+          fi
 
       - name: FongMi Native Export Env
         run: |
