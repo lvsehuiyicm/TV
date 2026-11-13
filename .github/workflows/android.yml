@@ -176,8 +176,8 @@ jobs:
           done
           sed -i '$ i\  public DefaultRenderersFactory setFfmpegAudioPrefer(boolean prefer) { return this; }\n  public DefaultRenderersFactory setFfmpegVideoPrefer(boolean prefer) { return this; }\n  public DefaultRenderersFactory setEnableDv7HevcFallback(boolean enable) { return this; }\n' ../media/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/DefaultRenderersFactory.java
           sed -i 's/getPlayerView()\.isDebugViewVisible()/false/g' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
-          sed -i 's/getPlayerView()\.toggleDebugView();/\/\/ removed by patch/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
-          sed -i 's/getPlayerView()\.hideDebugView();/\/\/ removed by patch/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
+          sed -i 's/getPlayerView()\.toggleDebugView();/{}/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
+          sed -i 's/getPlayerView()\.hideDebugView();/{}/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
 
       - name: Build mobile debug APK
         run: |
