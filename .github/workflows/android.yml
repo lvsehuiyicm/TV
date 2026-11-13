@@ -55,6 +55,16 @@ jobs:
             echo "SDK 37 already installed, skipping sdkmanager install"
           fi
 
+      - name: Create local.properties
+        run: |
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          {
+            echo "sdk.dir=$SDK_DIR"
+            echo "storeFile=debug.keystore"
+            echo "keyAlias=androiddebugkey"
+            echo "storePassword=android"
+          } > local.properties
+
       - name: Build mobile debug APK
         run: |
           chmod +x gradlew
