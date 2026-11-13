@@ -21,26 +21,30 @@ jobs:
 
       - name: Install Android SDK 37
         run: |
-          SDK_DIR="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           echo "SDK_DIR=$SDK_DIR"
           echo "--- already installed platforms ---"
           ls "$SDK_DIR/platforms" || true
           echo "--- already installed build-tools ---"
           ls "$SDK_DIR/build-tools" || true
+
           SDKMANAGER=""
           for c in "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/cmdline-tools/bin/sdkmanager"; do
             if [ -x "$c" ]; then SDKMANAGER="$c"; break; fi
           done
           if [ -z "$SDKMANAGER" ]; then
-            SDKMANAGER=$(find "$SDK_DIR/cmdline-tools" -maxdepth 3 -name sdkmanager -type f 2>/dev/null | head -n 1)
+            SDKMANAGER=$(find "$SDK_DIR/cmdline-tools" -maxdepth 3 -name sdkmanager -type f -executable 2>/dev/null | head -n 1)
           fi
           if [ -z "$SDKMANAGER" ]; then
             echo "::error::sdkmanager not found under $SDK_DIR/cmdline-tools"
             ls -R "$SDK_DIR/cmdline-tools" || true
             exit 1
           fi
+          chmod +x "$SDKMANAGER" || true
           echo "SDKMANAGER=$SDKMANAGER"
+
           yes | "$SDKMANAGER" --sdk_root="$SDK_DIR" --licenses >/dev/null || true
+
           NEED=""
           ls -d "$SDK_DIR/platforms/android-37"* >/dev/null 2>&1 || NEED="$NEED platforms;android-37"
           [ -d "$SDK_DIR/build-tools/37.0.0" ] || NEED="$NEED build-tools;37.0.0"
@@ -52,7 +56,9 @@ jobs:
           fi
 
       - name: Build mobile debug APK
-        run: ./gradlew :app:assembleMobileDebug --stacktrace
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleMobileDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
