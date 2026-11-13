@@ -5,6 +5,10 @@ name: Build mobile APK (from source)
 #     and packages them as lib-mpvplayer-release.aar / lib-decoder-ffmpeg-release.aar
 #  2. wires FongMi/media (release-1.11.0-fongmi) in as source dependencies
 #     so the androidx.media3.* classes the app imports actually resolve
+#  2b. adds the 46 missing FongMi-custom media3 classes as stubs
+#     (.github/stubs-media.zip -> ../media, .github/stubs-app.zip -> app)
+#     and patches 31 missing methods into the media checkout
+#     (.github/scripts/patch_media.py); see stub-plan.md §6
 #  3. builds :app:assembleMobileDebug (mobile flavor)
 # Based on the public recipe in AoThen/TVBoxAPP (.github/workflows/build-tvbox-osc.yml),
 # adapted to this fork (repo already checked out; real mpvplayer/ui-danmaku/
@@ -14,6 +18,9 @@ on:
   push:
     branches: [fongmi]
     paths:
+      # NOTE: only the workflow file itself triggers a run. Upload the stub
+      # zips and patch script first, then this file last, so one push starts
+      # exactly one run. Stub-only updates are started with workflow_dispatch.
       - '.github/workflows/android.yml'
   workflow_dispatch:
 
@@ -178,6 +185,18 @@ jobs:
           sed -i 's/getPlayerView()\.isDebugViewVisible()/false/g' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
           sed -i 's/getPlayerView()\.toggleDebugView();/{}/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
           sed -i 's/getPlayerView()\.hideDebugView();/{}/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
+          # Missing FongMi-custom media3 classes (46 stubs) + 31 missing methods
+          # (stub-plan.md §6): 45 stubs go into the media checkout (right module
+          # per class), 1 (LibassPlayerViewController) into the app module.
+          python3 -m zipfile -e .github/stubs-media.zip ../media/
+          python3 -m zipfile -e .github/stubs-app.zip app/src/main/java/
+          python3 .github/scripts/patch_media.py ../media
+          echo "--- stub files placed ---"
+          test -f ../media/libraries/common/src/main/java/androidx/media3/common/DiscMenuState.java
+          test -f ../media/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/source/EndTrimMediaSource.java
+          test -f ../media/libraries/mpvplayer/src/main/java/androidx/media3/common/audio/AudioChannelMix.java
+          test -f app/src/main/java/androidx/media3/ui/libass/LibassPlayerViewController.java
+          echo "stub check OK"
 
       - name: Build mobile debug APK
         run: |
