@@ -1,4 +1,14 @@
-name: Build mobile APK
+name: Build mobile APK (from source)
+
+# Builds the mobile debug APK entirely from public sources:
+#  1. compiles mpv + ffmpeg native libs from FongMi/mpv-android (+FongMi/mpv)
+#     and packages them as lib-mpvplayer-release.aar / lib-decoder-ffmpeg-release.aar
+#  2. wires FongMi/media (release-1.11.0-fongmi) in as source dependencies
+#     so the androidx.media3.* classes the app imports actually resolve
+#  3. builds :app:assembleMobileDebug (mobile flavor)
+# Based on the public recipe in AoThen/TVBoxAPP (.github/workflows/build-tvbox-osc.yml),
+# adapted to this fork (repo already checked out; real mpvplayer/ui-danmaku/
+# decoder-ffmpeg modules are used instead of stub classes).
 
 on:
   push:
@@ -10,6 +20,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v5
 
@@ -64,6 +75,103 @@ jobs:
             echo "keyAlias=androiddebugkey"
             echo "storePassword=android"
           } > local.properties
+
+      - name: Generate debug keystore
+        run: |
+          keytool -genkeypair -keystore app/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, O=Android, C=US"
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install lxml ujson pyquery requests jsonpath cachetools pycryptodome beautifulsoup4
+
+      - name: FongMi Native Checkout
+        run: |
+          set -euxo pipefail
+          MPA="${{ github.workspace }}/mpv-android"
+          git clone --depth 1 --branch fongmi https://github.com/FongMi/mpv-android.git "$MPA"
+          git clone --depth 1 --branch fongmi https://github.com/FongMi/mpv.git "$MPA/buildscripts/deps/mpv"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends autoconf pkgconf libtool ninja-build cmake python3-pip gperf nasm patch ant meson
+          sudo pip3 install --break-system-packages meson || echo "pip meson install failed, using apt meson"
+
+      - name: FongMi Native Export Env
+        run: |
+          set -euxo pipefail
+          cd "${{ github.workspace }}/mpv-android/buildscripts"
+          ./include/ci.sh export >> "$GITHUB_ENV"
+
+      - name: FongMi Native Cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/mpv-android-cache
+          key: "${{ env.CACHE_IDENTIFIER }}-TV"
+          enableCrossOsArchive: true
+
+      - name: FongMi Native Build
+        run: |
+          set -euxo pipefail
+          cd "${{ github.workspace }}/mpv-android/buildscripts"
+          mkdir -p "${{ runner.temp }}/mpv-android-cache"
+          export CMAKE_POLICY_VERSION_MINIMUM=3.5
+          printf 'tries = 5\nretry_connrefused = on\nretry_on_http_error = 500,502,503,504\n' > "$HOME/.wgetrc"
+          export MPV_GIT_REF=fongmi
+          CACHE_MODE=folder CACHE_FOLDER="${{ runner.temp }}/mpv-android-cache" ./include/ci.sh install
+          MPV_ANDROID_NATIVE_ONLY=1 ./include/ci.sh build
+
+      - name: FongMi Native JNI & Package
+        run: |
+          set -euxo pipefail
+          MPA="${{ github.workspace }}/mpv-android"
+          SCRIPTS="${{ github.workspace }}/.github/scripts"
+          TMP="${{ runner.temp }}"
+          curl -sL -o "$TMP/ffmpeg_jni.cc" \
+            "https://raw.githubusercontent.com/androidx/media/1.11.1/libraries/decoder_ffmpeg/src/main/jni/ffmpeg_jni.cc"
+          NDK_DIR=$(ls -d "$MPA/buildscripts/sdk/android-ndk-r30" 2>/dev/null || ls -d "$MPA/buildscripts/sdk/android-ndk-"* 2>/dev/null | head -n 1)
+          echo "NDK_DIR=$NDK_DIR"
+          bash -e "$SCRIPTS/build_ffmpeg_jni.sh" \
+            "$NDK_DIR" "$TMP/ffmpeg_jni.cc" \
+            "$MPA/buildscripts/prefix" "$TMP/mpv-jni"
+          python3 "$SCRIPTS/make_mpv_aars.py" \
+            --libs-dir "$MPA/app/src/main/libs" \
+            --jni-dir "$TMP/mpv-jni" \
+            --out-dir "${{ github.workspace }}/app/libs"
+          ls -la "${{ github.workspace }}/app/libs"
+          rm -rf "$MPA"
+
+      - name: Upload built AARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fongmi-native-aars
+          path: app/libs/lib-*.aar
+          if-no-files-found: error
+
+      - name: Wire FongMi media (source dependency)
+        run: |
+          set -euxo pipefail
+          git clone --branch release-1.11.0-fongmi --depth 1 https://github.com/FongMi/media.git ../media
+          sed -i 's/pluginManagement {/pluginManagement {\n    includeBuild("..\/media\/build-logic")\n    plugins { id("org.jetbrains.kotlin.android") version "2.2.0" }/' settings.gradle
+          python3 .github/scripts/merge_toml.py
+          for entry in common:common session:session exoplayer:exoplayer container:container decoder:decoder decoder-ffmpeg:decoder_ffmpeg ui:ui ui-danmaku:ui_danmaku database:database datasource:datasource datasource-okhttp:datasource_okhttp extractor:extractor mpvplayer:mpvplayer; do
+            proj="${entry%%:*}"
+            dir="${entry##*:}"
+            echo "include ':lib-${proj}'" >> settings.gradle
+            echo "project(':lib-${proj}').projectDir = new File(rootDir, '../media/libraries/${dir}')" >> settings.gradle
+          done
+          sed -i '/testImplementation/d' ../media/libraries/*/build.gradle.kts
+          sed -i '/androidTestImplementation/d' ../media/libraries/*/build.gradle.kts
+          for dep in common session ui ui-danmaku exoplayer extractor datasource database datasource-okhttp mpvplayer; do
+            sed -i "/^    coreLibraryDesugaring libs.desugar/i\    implementation project(':lib-${dep}')" app/build.gradle
+          done
+          sed -i '$ i\  public DefaultRenderersFactory setFfmpegAudioPrefer(boolean prefer) { return this; }\n  public DefaultRenderersFactory setFfmpegVideoPrefer(boolean prefer) { return this; }\n  public DefaultRenderersFactory setEnableDv7HevcFallback(boolean enable) { return this; }\n' ../media/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/DefaultRenderersFactory.java
+          sed -i 's/getPlayerView()\.isDebugViewVisible()/false/g' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
+          sed -i 's/getPlayerView()\.toggleDebugView();/\/\/ removed by patch/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
+          sed -i 's/getPlayerView()\.hideDebugView();/\/\/ removed by patch/' app/src/main/java/com/fongmi/android/tv/ui/activity/PlaybackActivity.java || true
 
       - name: Build mobile debug APK
         run: |
