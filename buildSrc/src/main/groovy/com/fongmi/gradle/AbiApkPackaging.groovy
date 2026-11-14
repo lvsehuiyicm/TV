@@ -11,12 +11,12 @@ class AbiApkPackaging {
     static final List<String> THUNDER_LIBRARIES = ['libxl_stat.so', 'libxl_thunder_sdk.so'].asImmutable()
     static final List<String> MPV_LIBRARIES = ['libmpv.so', 'libplayer.so'].asImmutable()
     static final Map<String, Map> RUNTIME_PROFILES = [
-        python: [packageName: 'com.fongmi.runtime.python', compatibilityId: 'catvod-python-plugin-v4', entryClass: 'com.fongmi.chaquo.RuntimeEntry', library: 'libchaquopy_java.so', label: 'Python', property: 'tvPython'],
-        nodejs: [packageName: 'com.fongmi.runtime.nodejs', compatibilityId: 'catvod-nodejs-plugin-v3', entryClass: 'com.fongmi.nodejs.RuntimeEntry', library: 'libnode.so', label: 'Node.js', property: 'tvNodeJs'],
-        quickjs: [packageName: 'com.fongmi.runtime.quickjs', compatibilityId: 'fongmi-quickjs-ng-0.17-v13', entryClass: 'com.fongmi.quickjs.RuntimeEntry', library: 'libquickjs-wrapper.so', label: 'QuickJS', property: 'tvQuickJs'],
-        thunder: [packageName: 'com.fongmi.runtime.thunder', compatibilityId: 'catvod-thunder-plugin-v1', entryClass: 'com.xunlei.downloadlib.RuntimeEntry', library: 'libxl_thunder_sdk.so', label: 'Thunder', property: 'tvThunder'],
-        bdj: [packageName: 'com.fongmi.runtime.bdj', compatibilityId: 'libbluray-1.4.1-openjdk8-zero-v1', archive: 'assets/bdj/runtime.zip', label: 'BD-J', property: 'tvBdj'],
-        mpv: [packageName: 'com.fongmi.runtime.mpv', compatibilityId: 'mpv-jni-ffmpeg-shared-v1', library: 'libplayer.so', label: 'mpv', property: 'tvMpv']
+        python: [packageName: 'com.zhulong.runtime.python', compatibilityId: 'catvod-python-plugin-v4', entryClass: 'com.fongmi.chaquo.RuntimeEntry', library: 'libchaquopy_java.so', label: 'Python', property: 'tvPython'],
+        nodejs: [packageName: 'com.zhulong.runtime.nodejs', compatibilityId: 'catvod-nodejs-plugin-v3', entryClass: 'com.fongmi.nodejs.RuntimeEntry', library: 'libnode.so', label: 'Node.js', property: 'tvNodeJs'],
+        quickjs: [packageName: 'com.zhulong.runtime.quickjs', compatibilityId: 'fongmi-quickjs-ng-0.17-v13', entryClass: 'com.fongmi.quickjs.RuntimeEntry', library: 'libquickjs-wrapper.so', label: 'QuickJS', property: 'tvQuickJs'],
+        thunder: [packageName: 'com.zhulong.runtime.thunder', compatibilityId: 'catvod-thunder-plugin-v1', entryClass: 'com.xunlei.downloadlib.RuntimeEntry', library: 'libxl_thunder_sdk.so', label: 'Thunder', property: 'tvThunder'],
+        bdj: [packageName: 'com.zhulong.runtime.bdj', compatibilityId: 'libbluray-1.4.1-openjdk8-zero-v1', archive: 'assets/bdj/runtime.zip', label: 'BD-J', property: 'tvBdj'],
+        mpv: [packageName: 'com.zhulong.runtime.mpv', compatibilityId: 'mpv-jni-ffmpeg-shared-v1', library: 'libplayer.so', label: 'mpv', property: 'tvMpv']
     ].asImmutable()
 
     static void configure(Project project, Object apkArtifact) {
