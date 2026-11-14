@@ -1,0 +1,85 @@
+{
+  "modules": [
+    {
+      "artifacts": [
+        {
+          "abi": "arm64-v8a",
+          "minSdk": 24,
+          "sha256": "a3c8d1b9d6674da40588f3ba8bbfe777f67e4f4966a799278806a9765f662e0e",
+          "size": 47196687,
+          "url": "https://github.com/lvsehuiyicm/TV/releases/download/runtime-1.1.3/runtime-python-1.1.3-arm64-v8a.apk"
+        }
+      ],
+      "compatibilityId": "catvod-python-plugin-v4",
+      "id": "python",
+      "packageName": "com.zhulong.runtime.python",
+      "versionCode": 113,
+      "versionName": "1.1.3"
+    },
+    {
+      "artifacts": [
+        {
+          "abi": "arm64-v8a",
+          "minSdk": 24,
+          "sha256": "e57b7654b38b8a8167579cd9721a0f0b255716030b079e461584da764208ae77",
+          "size": 49942899,
+          "url": "https://github.com/lvsehuiyicm/TV/releases/download/runtime-1.1.3/runtime-nodejs-1.0.7-arm64-v8a.apk"
+        }
+      ],
+      "compatibilityId": "catvod-nodejs-plugin-v3",
+      "id": "nodejs",
+      "packageName": "com.zhulong.runtime.nodejs",
+      "versionCode": 107,
+      "versionName": "1.0.7"
+    },
+    {
+      "artifacts": [
+        {
+          "abi": "arm64-v8a",
+          "minSdk": 24,
+          "sha256": "8844d75b338e178b093ee6f134be1c4ef40fb1dfffe06980c73601fb3ab07048",
+          "size": 2398678,
+          "url": "https://github.com/lvsehuiyicm/TV/releases/download/runtime-1.1.3/runtime-quickjs-1.1.1-arm64-v8a.apk"
+        }
+      ],
+      "compatibilityId": "fongmi-quickjs-ng-0.17-v13",
+      "id": "quickjs",
+      "packageName": "com.zhulong.runtime.quickjs",
+      "versionCode": 111,
+      "versionName": "1.1.1"
+    },
+    {
+      "artifacts": [
+        {
+          "abi": "arm64-v8a",
+          "minSdk": 24,
+          "sha256": "31656f2cc6f353fcc65f26bfd3eb724f19848cc52220675f20d6c7604df4cce7",
+          "size": 6515692,
+          "url": "https://github.com/lvsehuiyicm/TV/releases/download/runtime-1.1.3/runtime-thunder-1.0.4-arm64-v8a.apk"
+        }
+      ],
+      "compatibilityId": "catvod-thunder-plugin-v1",
+      "id": "thunder",
+      "packageName": "com.zhulong.runtime.thunder",
+      "versionCode": 5,
+      "versionName": "1.0.4"
+    },
+    {
+      "artifacts": [
+        {
+          "abi": "arm64-v8a",
+          "minSdk": 24,
+          "sha256": "e04fa658f0112d56f67d1a79b2d4e8f67815347f50a2938c223ec2f639a7fa6f",
+          "size": 18186585,
+          "url": "https://github.com/lvsehuiyicm/TV/releases/download/runtime-1.1.3/runtime-mpv-1.1.1-arm64-v8a.apk"
+        }
+      ],
+      "compatibilityId": "mpv-jni-ffmpeg-shared-v1",
+      "id": "mpv",
+      "packageName": "com.zhulong.runtime.mpv",
+      "versionCode": 111,
+      "versionName": "1.1.1"
+    }
+  ],
+  "schema": 1
+}
