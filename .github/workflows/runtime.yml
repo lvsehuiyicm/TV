@@ -173,6 +173,11 @@ jobs:
           ls -la "${{ github.workspace }}/app/libs"
           rm -rf "$MPA"
 
+
+      - name: Sync Python runtime inputs
+        run: |
+          set -euxo pipefail
+          python scripts/sync_python_runtime.py
       - name: Build Chaquopy runtime AAR
         run: |
           set -euxo pipefail
