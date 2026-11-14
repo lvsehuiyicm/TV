@@ -204,7 +204,7 @@ insert_before_class_end(
     "getVideoTransform()",
 )
 
-# ---------- 4.3 MpvPlayer.java (19 methods) ----------
+# ---------- 4.3 MpvPlayer.java (26 methods: 19 + 7 script methods, run #11) ----------
 print("MpvPlayer.java")
 text = read(MP)
 if "implements DiscMenuController" not in text:
@@ -219,6 +219,7 @@ for imp in (
     "import androidx.media3.common.text.SubtitleSelectionState;",
     "import androidx.media3.common.text.SubtitleOffsets;",
     "import androidx.media3.datasource.DataSource;",
+    "import java.io.File;",
     "import java.util.function.Consumer;",
 ):
     ensure_import(MP, imp)
@@ -283,7 +284,45 @@ insert_before(
     "\n"
     "  public void setDiscDataSourceFactory(DataSource.Factory dataSourceFactory) {}\n"
     "\n"
-    "  public void setSubtitleContentLoader(MpvSubtitleContentLoader loader) {}\n",
+    "  public void setSubtitleContentLoader(MpvSubtitleContentLoader loader) {}\n"
+    "\n"
+    "  // Script support (MpvScriptSession.java, run #11: 10x cannot find symbol).\n"
+    "  // The author's private media has these; public FongMi/media 1.11.0-fongmi\n"
+    "  // does not. Signatures are derived from the call sites; bodies are stubs\n"
+    "  // (scripts just won't run until the real native implementation lands).\n"
+    "  public interface LogListener {\n"
+    "    void onLogMessage(String prefix, int level, String text);\n"
+    "  }\n"
+    "\n"
+    "  public interface ScriptLoadListener {\n"
+    "    void onLoaded(boolean success, long clientId);\n"
+    "  }\n"
+    "\n"
+    "  public void setLogListener(int level, @Nullable LogListener listener) {}\n"
+    "\n"
+    "  public boolean setStartupScripts(List<File> scripts) {\n"
+    "    return false;\n"
+    "  }\n"
+    "\n"
+    "  public boolean loadScript(String path, @Nullable ScriptLoadListener listener) {\n"
+    "    return false;\n"
+    "  }\n"
+    "\n"
+    "  @Nullable\n"
+    "  public String getScriptData(String key) {\n"
+    "    return null;\n"
+    "  }\n"
+    "\n"
+    "  @Nullable\n"
+    "  public String getInputBindings() {\n"
+    "    return null;\n"
+    "  }\n"
+    "\n"
+    "  public void unloadScript(long clientId) {}\n"
+    "\n"
+    "  public boolean runScriptBinding(String binding) {\n"
+    "    return false;\n"
+    "  }\n",
     "getSubtitleSelectionState()",
 )
 insert_after(
