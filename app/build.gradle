@@ -94,6 +94,16 @@ android {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
+
+    // libc++_shared.so comes twice: once from the FongMi/media source
+    // dependency (mpvplayer module) and once from lib-mpvplayer-release.aar.
+    // Both copies are the same NDK STL library; keep the first.
+    packagingOptions {
+        jniLibs {
+            pickFirsts += 'lib/arm64-v8a/libc++_shared.so'
+            pickFirsts += 'lib/armeabi-v7a/libc++_shared.so'
+        }
+    }
 }
 
 AbiApkPackaging.configure(project, SingleArtifact.APK.INSTANCE)
