@@ -129,6 +129,10 @@ public class VodConfig extends BaseConfig {
 
     @Override
     protected void load(Config config) throws Throwable {
+        if (config.isEmpty()) {
+            parseConfig(config, new JsonObject());
+            return;
+        }
         boolean node = NodeRuntime.isConfig(config.getUrl());
         NodeRuntime runtime = NodeRuntime.get();
         if (!node) runtime.clear();
