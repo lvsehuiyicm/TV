@@ -85,7 +85,14 @@ jobs:
 
       - name: Generate debug keystore
         run: |
-          keytool -genkeypair -keystore app/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, O=Android, C=US"
+          # The keystore is committed in the repo (app/debug.keystore, CN=Zhulong)
+          # so every build signs with the same key and updates install in place.
+          # Only generate a fresh one if it is missing (e.g. a clean fork).
+          if [ ! -f app/debug.keystore ]; then
+            keytool -genkeypair -storetype PKCS12 -keystore app/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, O=Android, C=US"
+          else
+            echo "Using committed keystore app/debug.keystore"
+          fi
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
