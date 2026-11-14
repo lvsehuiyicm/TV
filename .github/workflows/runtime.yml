@@ -1,16 +1,23 @@
 name: Build runtime modules (from source)
 
-# Builds the independent runtime APKs (Python + QuickJS) from the fork's
-# own runtime/ project, signed with the same keystore as the app
-# (app/debug.keystore, CN=Zhulong) so the app's "Invalid runtime signer"
-# check accepts them. The official FongMi runtime APKs are signed with
-# FongMi's key and can never be installed by our app.
+# Builds the independent runtime APKs (Python, QuickJS, Node.js, Thunder,
+# MPV) from the fork's own runtime/ project, signed with the same keystore
+# as the app (app/debug.keystore, CN=Zhulong) so the app's
+# "Invalid runtime signer" check accepts them. The official FongMi
+# runtime APKs are signed with FongMi's key and can never be installed
+# by our app.
 #
 # Outputs (arm64 only — the user's phone is arm64-v8a):
 #   runtime/build/python/outputs/apk/arm64/release/runtime-python-arm64_v8a.apk
 #   runtime/build/quickjs/outputs/apk/arm64/release/runtime-quickjs-arm64_v8a.apk
-# Versions match the official catalog (python 1.1.3/113, quickjs 1.1.1/111)
-# so the catalog entries stay compatible.
+#   runtime/build/nodejs/outputs/apk/arm64/release/runtime-nodejs-arm64_v8a.apk
+#   runtime/build/thunder/outputs/apk/arm64/release/runtime-thunder-arm64_v8a.apk
+#   runtime/build/mpv/outputs/apk/arm64/release/runtime-mpv-arm64_v8a.apk
+# Versions match the official catalog (python 1.1.3/113, quickjs 1.1.1/111,
+# nodejs 1.0.7/107, thunder 1.0.4/5, mpv 1.1.1/111) so the catalog entries
+# stay compatible. BD-J is NOT built: it needs a j2re-zero runtime zip
+# (tvBdjRuntimeDirectory) that is not in this repo, and BD-J is only for
+# Blu-ray disc menus, not for video sources.
 #
 # The Python runtime needs app/libs/lib-mpvplayer-release.aar (cxxAar,
 # verified by PreparePythonAarTask), so the FongMi native build runs
@@ -181,7 +188,10 @@ jobs:
           chmod +x ../gradlew
           ../gradlew assembleArm64Release -PtvRuntimeModule=python -PtvPythonVersionCode=113 -PtvPythonVersionName=1.1.3 --stacktrace
           ../gradlew assembleArm64Release -PtvRuntimeModule=quickjs -PtvQuickJsVersionCode=111 -PtvQuickJsVersionName=1.1.1 --stacktrace
-          ls -la build/python/outputs/apk/arm64/release/ build/quickjs/outputs/apk/arm64/release/
+          ../gradlew assembleArm64Release -PtvRuntimeModule=nodejs -PtvNodeJsVersionCode=107 -PtvNodeJsVersionName=1.0.7 --stacktrace
+          ../gradlew assembleArm64Release -PtvRuntimeModule=thunder -PtvThunderVersionCode=5 -PtvThunderVersionName=1.0.4 --stacktrace
+          ../gradlew assembleArm64Release -PtvRuntimeModule=mpv -PtvMpvVersionCode=111 -PtvMpvVersionName=1.1.1 --stacktrace
+          ls -la build/*/outputs/apk/arm64/release/
 
       - name: Upload runtime APKs
         uses: actions/upload-artifact@v4
@@ -190,4 +200,7 @@ jobs:
           path: |
             runtime/build/python/outputs/apk/arm64/release/*.apk
             runtime/build/quickjs/outputs/apk/arm64/release/*.apk
+            runtime/build/nodejs/outputs/apk/arm64/release/*.apk
+            runtime/build/thunder/outputs/apk/arm64/release/*.apk
+            runtime/build/mpv/outputs/apk/arm64/release/*.apk
           if-no-files-found: error
