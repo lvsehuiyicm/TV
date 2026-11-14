@@ -14,6 +14,7 @@ import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.utils.ScriptManager;
+import com.fongmi.android.tv.utils.SiteOrder;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.bean.Doh;
 import com.github.catvod.bean.Header;
@@ -215,7 +216,8 @@ public class VodConfig extends BaseConfig {
         BaseLoader.get().parseJar(spider, true);
         setSites(Json.safeListElement(object, "sites").stream().map(e -> Site.objectFrom(e, spider)).distinct().collect(Collectors.toCollection(ArrayList::new)));
         Set<String> keys = getSites().stream().map(Site::getKey).collect(Collectors.toSet());
-        ScriptManager.get().scan().stream().filter(site -> keys.add(site.getKey())).forEach(site -> getSites().add(site));
+        ScriptManager.get().scan().stream().filter(site -> keys.add(site.getKey())).forEach(site -> getSites().add(site));     
+        getSites().removeIf(site -> SiteOrder.isRemoved(site.getKey()));
         Map<String, Site> items = Site.findAll().stream().collect(Collectors.toMap(Site::getKey, Function.identity()));
         getSites().forEach(site -> site.sync(items.get(site.getKey())));
         setHome(config, getSites().isEmpty() ? new Site() : getSites().stream().filter(item -> item.getKey().equals(config.getHome())).findFirst().orElse(getSites().get(0)), false);
