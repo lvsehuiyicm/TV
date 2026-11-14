@@ -31,16 +31,29 @@ public final class ExoVideoEffectController {
         colorTone.setAdjustment(adjustment);
         detail.setAdjustment(adjustment);
         if (!configured) {
-            player.setVideoEffects(effects);
+            try {
+                player.setVideoEffects(effects);
+            } catch (Exception ignored) {
+                // media3 effect module is not included in this build; video effects are unavailable
+                return;
+            }
             configured = true;
         } else if (!player.getPlayWhenReady()) {
-            player.setVideoEffects(VideoFrameProcessor.REDRAW);
+            try {
+                player.setVideoEffects(VideoFrameProcessor.REDRAW);
+            } catch (Exception ignored) {
+                // media3 effect module is not included in this build; video effects are unavailable
+            }
         }
     }
 
     public void clear(ExoPlayer player) {
         if (!configured) return;
-        player.setVideoEffects(List.of());
+        try {
+            player.setVideoEffects(List.of());
+        } catch (Exception ignored) {
+            // media3 effect module is not included in this build; video effects are unavailable
+        }
         configured = false;
     }
 }
