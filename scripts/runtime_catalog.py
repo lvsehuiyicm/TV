@@ -32,7 +32,7 @@ PYTHON_ASSETS = ("app.imy", "build.json", "bootstrap.imy", "stdlib-common.imy", 
 JAVA_ENTRIES = {"python": "com.fongmi.chaquo.RuntimeEntry", "nodejs": "com.fongmi.nodejs.RuntimeEntry", "quickjs": "com.fongmi.quickjs.RuntimeEntry", "thunder": "com.xunlei.downloadlib.RuntimeEntry"}
 BDJ_ARCHIVE = "assets/bdj/runtime.zip"
 BDJ_LIBRARIES = ("libjava.so", "libverify.so", "libzip.so", "libnet.so", "libnio.so", "server/libjvm.so")
-DEFAULT_URL = "https://github.com/FongMi/Release/releases/download/module"
+DEFAULT_URL = "https://github.com/lvsehuiyicm/TV/releases/download/runtime-1.1.3"
 
 
 def digest(stream):
@@ -71,7 +71,7 @@ def verify_catalog_module(file, module, ids):
     if not isinstance(identity, str) or identity not in MODULES or identity in ids:
         raise ValueError(f"{file.name}: unknown or duplicate catalog module")
     ids.add(identity)
-    if module.get("packageName") != "com.fongmi.runtime." + identity or module.get("compatibilityId") != MODULES[identity][0]:
+    if module.get("packageName") != "com.zhulong.runtime." + identity or module.get("compatibilityId") != MODULES[identity][0]:
         raise ValueError(f"{file.name}: incompatible catalog module")
     _, name = read_version(file, module)
     artifacts = module.get("artifacts")
@@ -270,7 +270,7 @@ def verify_mpv_runtime(file, apk, metadata, module, abi):
 
 
 def read_apk(file, module, abi, aapt2):
-    package = "com.fongmi.runtime." + module
+    package = "com.zhulong.runtime." + module
     profile, _ = MODULES[module]
     with ZipFile(file) as apk:
         metadata = read_runtime_metadata(file, apk, module, abi)
@@ -289,7 +289,7 @@ def read_runtime_metadata(file, apk, module, abi):
         raise ValueError(f"{file.name}: invalid runtime metadata size")
     metadata = json.loads(apk.read(entry))
     if (not isinstance(metadata, dict) or metadata.get("module") != module
-            or metadata.get("packageName") != "com.fongmi.runtime." + module
+            or metadata.get("packageName") != "com.zhulong.runtime." + module
             or metadata.get("compatibilityId") != MODULES[module][0] or metadata.get("abi") != abi):
         raise ValueError(f"{file.name}: incompatible runtime metadata")
     return metadata
@@ -313,7 +313,7 @@ def read_manifest(file, module, abi, code, name, aapt2):
     lines = result.stdout.splitlines()
     package_line = next((line for line in lines if line.startswith("package:")), "")
     fields = dict(re.findall(r"(\w+)='([^']*)'", package_line))
-    if fields.get("name") != "com.fongmi.runtime." + module or fields.get("versionCode") != str(code) or fields.get("versionName") != name:
+    if fields.get("name") != "com.zhulong.runtime." + module or fields.get("versionCode") != str(code) or fields.get("versionName") != name:
         raise ValueError(f"{file.name}: manifest package or version mismatch")
     sdk = next((line for line in lines if line.startswith(("minSdkVersion:", "sdkVersion:"))), "")
     match = re.fullmatch(r"(?:minSdkVersion|sdkVersion):'([0-9]+)'", sdk)
