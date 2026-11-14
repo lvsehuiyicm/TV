@@ -268,6 +268,7 @@
     <string name="script_delete">刪除</string>
     <string name="script_folder_exists">該資料夾已添加</string>
     <string name="file_choose_dir">選擇當前目錄</string>
+        <string name="script_count">已添加 %1$d 個資料夾，已識別 %2$d 個腳本</string>
     <string name="setting_live">直播</string>
     <string name="setting_wall">壁紙</string>
     <string name="setting_player">播放設定</string>
