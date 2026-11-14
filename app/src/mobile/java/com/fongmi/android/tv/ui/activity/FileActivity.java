@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,9 +21,12 @@ import java.io.File;
 
 public class FileActivity extends BaseActivity implements FileAdapter.OnClickListener {
 
+    public static final String EXTRA_PICK_DIR = "pick_dir";
+
     private ActivityFileBinding mBinding;
     private FileAdapter mAdapter;
     private File dir;
+    private boolean pickDir;
 
     private boolean isRoot() {
         return Path.root().equals(dir);
@@ -43,6 +47,12 @@ public class FileActivity extends BaseActivity implements FileAdapter.OnClickLis
     @Override
     protected void initView(Bundle savedInstanceState) {
         setSupportActionBar(mBinding.toolbar);
+        pickDir = getIntent().getBooleanExtra(EXTRA_PICK_DIR, false);
+        mBinding.choose.setOnClickListener(v -> {
+            if (dir == null) return;
+            setResult(RESULT_OK, new Intent().setData(Uri.fromFile(dir)));
+            finish();
+        });
         setRecyclerView();
         checkPermission();
     }
@@ -59,6 +69,7 @@ public class FileActivity extends BaseActivity implements FileAdapter.OnClickLis
     private void update(File dir) {
         mBinding.recycler.scrollToPosition(0);
         mAdapter.addAll(Path.list(this.dir = dir));
+        mBinding.choose.setVisibility(pickDir ? View.VISIBLE : View.GONE);
         mBinding.title.setText(dir.getAbsolutePath());
         mBinding.progressLayout.showContent(true, mAdapter.getItemCount());
     }
