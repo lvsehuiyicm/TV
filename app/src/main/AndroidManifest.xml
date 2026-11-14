@@ -19,12 +19,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
-        <package android:name="com.fongmi.runtime.bdj" />
-        <package android:name="com.fongmi.runtime.python" />
-        <package android:name="com.fongmi.runtime.nodejs" />
-        <package android:name="com.fongmi.runtime.quickjs" />
-        <package android:name="com.fongmi.runtime.thunder" />
-        <package android:name="com.fongmi.runtime.mpv" />
+        <package android:name="com.zhulong.runtime.bdj" />
+        <package android:name="com.zhulong.runtime.python" />
+        <package android:name="com.zhulong.runtime.nodejs" />
+        <package android:name="com.zhulong.runtime.quickjs" />
+        <package android:name="com.zhulong.runtime.thunder" />
+        <package android:name="com.zhulong.runtime.mpv" />
         <intent>
             <action android:name="android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION" />
             <data android:scheme="package" />
@@ -137,7 +137,7 @@
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
 
-        <meta-data android:name="com.fongmi.runtime.catalog" android:value="${runtimeCatalog}" />
+        <meta-data android:name="com.zhulong.runtime.catalog" android:value="${runtimeCatalog}" />
 
         <service
             android:name=".api.node.NodeService"
