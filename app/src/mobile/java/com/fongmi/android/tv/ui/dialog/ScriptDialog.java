@@ -48,12 +48,17 @@ public class ScriptDialog extends BaseAlertDialog {
         adapter = new ScriptAdapter(folder -> {
             ScriptManager.get().removeFolder(folder);
             changed = true;
-            adapter.refresh();
+            refresh();
         });
         binding.recycler.setAdapter(adapter);
         binding.recycler.setHasFixedSize(true);
         binding.recycler.setItemAnimator(null);
+        refresh();
+    }
+
+    private void refresh() {
         adapter.refresh();
+        binding.count.setText(getString(R.string.script_count, ScriptManager.get().getFolders().size(), ScriptManager.get().scanFiles().size()));
     }
 
     @Override
@@ -77,7 +82,7 @@ public class ScriptDialog extends BaseAlertDialog {
             return;
         }
         changed = true;
-        adapter.refresh();
+        refresh();
     });
 
     private void onPositive(DialogInterface dialog, int which) {
