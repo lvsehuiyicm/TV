@@ -74,7 +74,7 @@ public class RuntimeInstaller {
     private static String getCatalogUrl() throws IOException {
         try {
             var info = App.get().getBaseContext().getPackageManager().getApplicationInfo(BuildConfig.APPLICATION_ID, PackageManager.GET_META_DATA);
-            return info.metaData == null ? "" : info.metaData.getString("com.fongmi.runtime.catalog", "");
+            return info.metaData == null ? "" : info.metaData.getString("com.zhulong.runtime.catalog", "");
         } catch (PackageManager.NameNotFoundException e) {
             throw new IOException("Unable to read runtime catalog configuration", e);
         }
