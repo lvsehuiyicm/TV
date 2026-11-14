@@ -37,7 +37,11 @@ public final class ExoPlayerEffect implements PlayerEffect {
 
     public void setPlayer(ExoPlayer player) {
         this.player = player;
-        player.setVideoEffects(List.of());
+        try {
+            player.setVideoEffects(List.of());
+        } catch (Exception ignored) {
+            // media3 effect module is not included in this build; video effects are unavailable
+    }
     }
 
     public void release() {
