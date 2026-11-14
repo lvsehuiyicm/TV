@@ -69,7 +69,7 @@ public enum RuntimeModule {
     }
 
     public String getPackageName() {
-        return "com.fongmi.runtime." + id;
+        return "com.zhulong.runtime." + id;
     }
 
     public String getCompatibilityId() {
