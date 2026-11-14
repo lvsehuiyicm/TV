@@ -35,6 +35,7 @@ import com.fongmi.android.tv.ui.dialog.DeviceConnectDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.RestoreDialog;
+import com.fongmi.android.tv.ui.dialog.ScriptDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.ui.dialog.ThemeDialog;
 import com.fongmi.android.tv.utils.FileUtil;
@@ -129,6 +130,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         mBinding.version.setOnClickListener(this::onVersion);
         mBinding.vod.setOnLongClickListener(this::onVodEdit);
         mBinding.vodHome.setOnClickListener(this::onVodHome);
+        mBinding.script.setOnClickListener(this::onScript);
         mBinding.live.setOnLongClickListener(this::onLiveEdit);
         mBinding.liveHome.setOnClickListener(this::onLiveHome);
         mBinding.wall.setOnLongClickListener(this::onWallEdit);
@@ -235,6 +237,14 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
 
     private void onVodHome(View view) {
         SiteDialog.create().search().change().show(this);
+    }
+
+    private void onScript(View view) {
+        ScriptDialog.create().show(this);
+    }
+
+    public void reloadVod() {
+        VodConfig.load(VodConfig.get().getConfig(), getCallback());
     }
 
     private void onLiveHome(View view) {
