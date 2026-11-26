@@ -80,7 +80,6 @@
                         android:gravity="center"
                         android:paddingStart="16dp"
                         android:paddingEnd="16dp"
-                        android:selected="true"
                         android:text="@string/data_clear_cache"
                         android:textColor="@color/black"
                         android:textSize="14sp"

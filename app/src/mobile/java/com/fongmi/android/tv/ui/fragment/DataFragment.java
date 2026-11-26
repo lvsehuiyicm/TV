@@ -46,6 +46,7 @@ public class DataFragment extends BaseFragment {
     protected void initEvent() {
         mBinding.backupNow.setOnClickListener(v -> onBackup());
         mBinding.restoreNow.setOnClickListener(v -> onRestore());
+        mBinding.clearCache.setSelected(true);
         mBinding.clearCache.setOnClickListener(this::onCache);
         mBinding.version.setOnClickListener(this::onVersion);
     }

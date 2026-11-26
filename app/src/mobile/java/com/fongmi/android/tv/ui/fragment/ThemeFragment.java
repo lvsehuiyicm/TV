@@ -145,6 +145,7 @@ public class ThemeFragment extends BaseFragment {
     /** 效果预览：用选中壁纸画一个缩小版首页。 */
     private void refreshPreview() {
         mBinding.previewBg.setImageResource(BGS[Setting.getWall()]);
+        mBinding.previewChipMovie.setSelected(true);
     }
 
     private float dp(int dp) {
