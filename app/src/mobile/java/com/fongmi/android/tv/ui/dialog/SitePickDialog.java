@@ -11,6 +11,7 @@ import com.fongmi.android.tv.databinding.DialogSitePickBinding;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.ui.adapter.SiteAdapter;
 import com.fongmi.android.tv.ui.adapter.SitePickAdapter;
+import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -46,6 +47,12 @@ public class SitePickDialog extends BaseAlertDialog implements SiteListener, Sit
         binding.recycler.setAdapter(adapter);
         binding.recycler.setItemAnimator(null);
         binding.recycler.setHasFixedSize(true);
+        binding.keyword.addTextChangedListener(new CustomTextListener() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                adapter.filter(s.toString());
+            }
+        });
     }
 
     @Override
@@ -74,6 +81,7 @@ public class SitePickDialog extends BaseAlertDialog implements SiteListener, Sit
     /** 管理完刷新列表：重建列表与首页源；空表时关掉弹窗。 */
     private void refreshList() {
         if (adapter == null) return;
+        binding.keyword.setText("");
         adapter.refresh(SiteAdapter.buildList(), VodConfig.get().getHome().getKey());
         if (adapter.getItemCount() == 0) dismiss();
     }

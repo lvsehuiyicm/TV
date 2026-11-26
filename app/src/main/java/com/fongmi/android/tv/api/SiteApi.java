@@ -233,6 +233,9 @@ public class SiteApi {
             if (result.getFlag().isEmpty()) result.setFlag(flag);
             result.setHeader(site.getHeader());
             result.setKey(key);
+            // 0.1.120：蜘蛛回的已是直链媒体地址（m3u8/mp4），直接标直接播，不走解析；
+            // 否则播失败兜底会先烧一次解析（默认解析线被墙时 15 秒超时 + 验证页），每条线都这样就到不了能播的线。
+            if (Sniffer.isVideoFormat(result.getRealUrl())) result.setDirect();
             return result;
         }
         if (site.isEmpty() && PUSH.equals(key)) return directPlayer(key, flag, id);

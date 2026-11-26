@@ -25,7 +25,6 @@ import com.fongmi.android.tv.bean.Value;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.FragmentVodBinding;
 import com.fongmi.android.tv.event.CastEvent;
-import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.event.StateEvent;
 import com.fongmi.android.tv.impl.Callback;
@@ -49,9 +48,7 @@ import com.fongmi.android.tv.ui.dialog.SitePickDialog;
 import com.fongmi.android.tv.utils.CheckStore;
 import com.fongmi.android.tv.utils.ConfigManager;
 import com.fongmi.android.tv.utils.Notify;
-import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.SourceChecker;
-import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.greenrobot.eventbus.EventBus;
@@ -107,40 +104,6 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         showProgress();
         setSourceBar();
         refreshIfaceTabs();
-        applyHomeColors();
-    }
-
-    /** 0.1.119：只换默认颜色——默认壁纸（内置壁纸 0）时首页覆写成直播同款深色，
-     * 切到别的壁纸/主题色时走原主题渲染，主题切换能力完整保留。 */
-    private void applyHomeColors() {
-        boolean dark = ResUtil.isDefaultWall();
-        if (dark) {
-            mBinding.getRoot().setBackgroundColor(ResUtil.getColor(R.color.live_dark_bg));
-            mBinding.title.setTextColor(ResUtil.getColor(R.color.white));
-            mBinding.settingsBtn.setImageTintList(ColorStateList.valueOf(ResUtil.getColor(R.color.white)));
-            mBinding.sourceBar.setBackground(ResUtil.getDrawable(R.drawable.shape_top_pill_dark));
-            mBinding.sourceName.setTextColor(ResUtil.getColor(R.color.white));
-            mBinding.sourceArrow.setImageTintList(ColorStateList.valueOf(ResUtil.getColor(R.color.white)));
-        } else {
-            mBinding.getRoot().setBackground(null);
-            int onSurface = MaterialColors.getColor(mBinding.getRoot(), com.google.android.material.R.attr.colorOnSurface);
-            mBinding.title.setTextColor(onSurface);
-            mBinding.settingsBtn.setImageTintList(ColorStateList.valueOf(onSurface));
-            mBinding.sourceBar.setBackground(ResUtil.getDrawable(R.drawable.shape_top_pill));
-            mBinding.sourceName.setTextColor(onSurface);
-            mBinding.sourceArrow.setImageTintList(ColorStateList.valueOf(onSurface));
-        }
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onConfigEvent(ConfigEvent event) {
-        // 0.1.119：换壁纸不 recreate Activity，收到 WALL 后重跑覆写并重绘三个 adapter
-        //（三者都在绑定时现算开关值，重绘即生效）。
-        if (event.type() != ConfigEvent.Type.WALL) return;
-        applyHomeColors();
-        if (mIfaceAdapter != null) mIfaceAdapter.notifyDataSetChanged();
-        if (mAdapter != null) mAdapter.notifyDataSetChanged();
-        if (mSectionAdapter != null) mSectionAdapter.notifyDataSetChanged();
     }
 
     @Override

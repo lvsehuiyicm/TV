@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- 0.1.119：selector_type_bg 的深色版（分类 chip 的底色，选中琥珀、未选中深灰药丸）。 -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="#F1BB6C" android:state_selected="true" />
-    <item android:color="#2A2D33" />
-</selector>

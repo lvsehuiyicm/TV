@@ -19,12 +19,17 @@ import com.fongmi.android.tv.utils.ConfigManager;
 import com.fongmi.android.tv.utils.SiteOrder;
 import com.fongmi.android.tv.utils.SourceChecker;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHolder> {
 
     // 0.1.118：refresh() 要重写 items 与 homeKey，两个字段都不能是 final。
     private List<Site> items;
+    // 0.1.120：搜索过滤用——all 是全量表，items 是当前显示表。
+    private final List<Site> all = new ArrayList<>();
+    private String keyword = "";
     private String homeKey;
     private String pendingKey;
 
@@ -32,6 +37,7 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
         this.items = items;
         this.homeKey = homeKey;
         this.pendingKey = homeKey;
+        all.addAll(items);
     }
 
     public Site getPending() {
@@ -53,9 +59,30 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
 
     /** 管理后刷新列表：homeKey 与 pending 都回到当前首页源。 */
     public void refresh(List<Site> items, String homeKey) {
+        all.clear();
+        all.addAll(items);
         this.items = items;
         this.homeKey = homeKey;
         this.pendingKey = homeKey;
+        notifyDataSetChanged();
+    }
+
+    public boolean isFiltering() {
+        return keyword != null && !keyword.trim().isEmpty();
+    }
+
+    /** 0.1.120：按站名过滤，照 SiteAdapter.filter 抄。 */
+    public void filter(String keyword) {
+        this.keyword = keyword == null ? "" : keyword;
+        items.clear();
+        if (!isFiltering()) {
+            items.addAll(all);
+        } else {
+            String key = this.keyword.toLowerCase(Locale.getDefault());
+            for (Site site : all) if (site.getName().toLowerCase(Locale.getDefault()).contains(key)) items.add(site);
+        }
+        // 过滤后待选的源不在当前列表里时，待选回到当前首页源，否则点“确定”没反应。
+        if (pendingKey != null && getPending() == null) pendingKey = homeKey;
         notifyDataSetChanged();
     }
 

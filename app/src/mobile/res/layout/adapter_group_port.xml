@@ -16,10 +16,11 @@
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/name"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:duplicateParentState="true"
         android:ellipsize="none"
+        android:gravity="center"
         android:maxLines="1"
         android:paddingStart="6dp"
         android:paddingTop="8dp"
