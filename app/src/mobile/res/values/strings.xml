@@ -173,6 +173,7 @@
     <string name="site_source">Source: %1$s</string>
     <string name="site_interface">Interface: %1$s</string>
     <string name="config_manage_iface">Manage interfaces</string>
+    <string name="live_next">Next</string>
     <string name="config_kind_folder">Folder</string>
     <string name="config_kind_file">Single source</string>
     <string name="config_kind_url">Online interface</string>

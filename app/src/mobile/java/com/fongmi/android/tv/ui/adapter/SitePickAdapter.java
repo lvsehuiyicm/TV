@@ -23,8 +23,9 @@ import java.util.List;
 
 public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHolder> {
 
-    private final List<Site> items;
-    private final String homeKey;
+    // 0.1.118：refresh() 要重写 items 与 homeKey，两个字段都不能是 final。
+    private List<Site> items;
+    private String homeKey;
     private String pendingKey;
 
     public SitePickAdapter(List<Site> items, String homeKey) {
@@ -37,6 +38,25 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
         if (pendingKey == null) return null;
         for (Site site : items) if (pendingKey.equals(site.getKey())) return site;
         return null;
+    }
+
+    public interface OnItemLongClickListener {
+
+        void onItemLongClick(Site site);
+    }
+
+    private OnItemLongClickListener longClickListener;
+
+    public void setOnItemLongClickListener(OnItemLongClickListener listener) {
+        longClickListener = listener;
+    }
+
+    /** 管理后刷新列表：homeKey 与 pending 都回到当前首页源。 */
+    public void refresh(List<Site> items, String homeKey) {
+        this.items = items;
+        this.homeKey = homeKey;
+        this.pendingKey = homeKey;
+        notifyDataSetChanged();
     }
 
     @Override
@@ -77,6 +97,10 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
         holder.binding.getRoot().setOnClickListener(v -> {
             pendingKey = item.getKey();
             notifyDataSetChanged();
+        });
+        holder.binding.getRoot().setOnLongClickListener(v -> {
+            if (longClickListener != null) longClickListener.onItemLongClick(item);
+            return true;
         });
     }
 

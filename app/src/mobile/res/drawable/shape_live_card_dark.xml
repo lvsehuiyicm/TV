@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.1.118：直播竖屏节目卡的底（深色卡片，12dp 圆角）。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/live_dark_card" />
+    <corners android:radius="12dp" />
+</shape>

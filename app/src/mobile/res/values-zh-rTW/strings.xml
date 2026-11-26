@@ -112,6 +112,7 @@
     <string name="site_source">片源：%1$s</string>
     <string name="site_interface">接口：%1$s</string>
     <string name="config_manage_iface">管理接口</string>
+    <string name="live_next">接下來</string>
     <string name="config_kind_folder">文件夾</string>
     <string name="config_kind_file">單源</string>
     <string name="config_kind_url">在線接口</string>

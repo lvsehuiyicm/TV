@@ -160,6 +160,23 @@ public class ConfigManager {
         Prefers.put(KEY_SUBS, App.gson().toJson(subs));
     }
 
+    /** 0.1.118：首页 tab 拖拽换位置后，只重排 TAB_VOD 的槽位（拖后前 4＋其余 VOD 原顺序），其他 tab 的订阅原位不动。按 id 比对——Sub 没有 override equals，不能用 contains 比引用。 */
+    public static void saveVodOrder(List<Sub> visible) {
+        List<Sub> all = getAll();
+        List<String> visibleIds = new ArrayList<>();
+        for (Sub sub : visible) visibleIds.add(sub.id);
+        List<Sub> rest = new ArrayList<>();
+        for (Sub sub : all) if (sub.tab == TAB_VOD && !visibleIds.contains(sub.id)) rest.add(sub);
+        List<Sub> result = new ArrayList<>();
+        int index = 0;
+        for (Sub sub : all) {
+            if (sub.tab != TAB_VOD) result.add(sub);
+            else if (index < visible.size()) result.add(visible.get(index++));
+            else result.add(rest.remove(0));
+        }
+        save(result);
+    }
+
     public static String getActiveId() {
         return Prefers.getString(KEY_ACTIVE, "");
     }

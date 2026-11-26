@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.1.118：直播竖屏频道号左边的圆圈（透明底＋2dp 白描边；原 shape_port_circle 的 ?attr/colorOnSurface 描边在深色底上太暗）。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/white_70" />
+</shape>

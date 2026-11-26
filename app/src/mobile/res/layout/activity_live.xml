@@ -62,18 +62,15 @@
 
         </FrameLayout>
 
-        <!-- 竖屏面板：底色是主题壁纸（CustomWallView），换主题自动跟着变 -->
+        <!-- 竖屏面板：0.1.118 起固定深色底，不跟主题壁纸 -->
         <FrameLayout
             android:id="@+id/portrait"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:background="@color/live_dark_bg"
             android:visibility="gone"
             tools:visibility="visible">
-
-            <com.fongmi.android.tv.ui.custom.CustomWallView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
 
             <androidx.appcompat.widget.LinearLayoutCompat
                 android:layout_width="match_parent"
@@ -95,10 +92,10 @@
                         android:id="@+id/portIcon"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
-                        android:background="@drawable/shape_port_circle"
+                        android:background="@drawable/shape_live_circle_outline"
                         android:padding="15dp"
                         android:src="@drawable/exo_icon_play"
-                        android:tint="?attr/colorOnSurface" />
+                        android:tint="@color/white" />
 
                     <androidx.appcompat.widget.LinearLayoutCompat
                         android:layout_width="0dp"
@@ -111,7 +108,7 @@
                             android:id="@+id/portNumber"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/white"
                             android:textSize="20sp"
                             android:textStyle="bold"
                             tools:text="001" />
@@ -120,7 +117,7 @@
                             android:id="@+id/portSource"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textColor="@color/white_70"
                             android:textSize="13sp"
                             tools:text="来源：电视 类型：直播列表" />
 
@@ -128,9 +125,116 @@
 
                 </androidx.appcompat.widget.LinearLayoutCompat>
 
-                <!-- 0.1.101：五个彩色按钮（全屏/推送/收藏/简介/菜单）整行拿掉（用户 2026-11-24 12:43 定）。
-                     全屏入口改成双击视频 + 视频右下角小图标（见上面 btnPortFullscreen）；
-                     推送/收藏/简介/菜单在竖屏随之拿掉，横屏播放器控制栏里仍有这些入口。 -->
+                <!-- 0.1.118：五个彩色圆按钮（全屏/推送/收藏/简介/菜单）回来了（0.1.101 拿掉过）；
+                     全屏入口仍有双击视频 + 视频右下角小图标（见上面 btnPortFullscreen）。 -->
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_horizontal"
+                    android:orientation="horizontal">
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnPortFull"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/shape_live_btn_circle"
+                        android:backgroundTint="@color/live_btn_fullscreen"
+                        android:contentDescription="@string/live_fullscreen"
+                        android:src="@drawable/ic_control_fullscreen"
+                        android:tint="@color/white" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnPortCast"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/shape_live_btn_circle"
+                        android:backgroundTint="@color/live_btn_cast"
+                        android:contentDescription="@string/live_cast"
+                        android:src="@drawable/ic_control_cast"
+                        android:tint="@color/white" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnPortKeep"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/shape_live_btn_circle"
+                        android:backgroundTint="@color/live_dark_pill"
+                        android:contentDescription="@string/keep"
+                        android:src="@drawable/ic_action_keep"
+                        android:tint="@color/white" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnPortInfo"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/shape_live_btn_circle"
+                        android:backgroundTint="@color/live_btn_info"
+                        android:contentDescription="@string/live_info"
+                        android:src="@drawable/ic_control_info"
+                        android:tint="@color/white" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnPortMenu"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/shape_live_btn_circle"
+                        android:backgroundTint="@color/live_btn_menu"
+                        android:contentDescription="@string/live_menu"
+                        android:src="@drawable/ic_action_menu"
+                        android:tint="@color/white" />
+
+                </androidx.appcompat.widget.LinearLayoutCompat>
+
+                <!-- 0.1.118：节目卡（当前节目＋进度＋接下来）；无 EPG 时只显示频道名，进度与接下来行隐藏，卡片本身保留。 -->
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:id="@+id/cardPortProgram"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/shape_live_card_dark"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/portProgTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <ProgressBar
+                        android:id="@+id/portProgBar"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="8dp"
+                        android:max="100"
+                        android:progressBackgroundTint="@color/live_dark_pill"
+                        android:progressTint="@color/live_selected" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/portProgNext"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/white_70"
+                        android:textSize="13sp" />
+
+                </androidx.appcompat.widget.LinearLayoutCompat>
 
                 <!-- 分组网格（0.1.102：四方格图标拿掉，分组从横向一排 tab 改成 4 列网格，全部的分全露出来；
                      点哪个分组就只显示那个分组的频道，其他分组的频道不出现；分组字比下边频道大一号且加黑，

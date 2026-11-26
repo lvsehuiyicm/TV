@@ -9,6 +9,9 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
@@ -58,13 +61,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class VodFragment extends BaseFragment implements ConfigListener, SiteListener, FilterListener, TypeAdapter.OnClickListener, SectionAdapter.OnClickListener, IfaceTabAdapter.OnClickListener, IfaceSheetDialog.OnSelectListener {
+public class VodFragment extends BaseFragment implements ConfigListener, SiteListener, FilterListener, TypeAdapter.OnClickListener, SectionAdapter.OnClickListener, IfaceTabAdapter.OnClickListener, IfaceSheetDialog.OnSelectListener, IfaceTabAdapter.OnTabOrderChangedListener {
 
     private FragmentVodBinding mBinding;
     private SiteViewModel mViewModel;
     private TypeAdapter mAdapter;
     private SectionAdapter mSectionAdapter;
     private IfaceTabAdapter mIfaceAdapter;
+    private GridLayoutManager mIfaceLayoutManager;
     private Result mResult;
     private FolderFragment mFocused;
     private Class mFocusedType;
@@ -120,7 +124,37 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     private void setRecyclerView() {
         mBinding.ifaceTabs.setHasFixedSize(true);
         mBinding.ifaceTabs.setItemAnimator(null);
+        mIfaceLayoutManager = new GridLayoutManager(requireContext(), 1);
+        mBinding.ifaceTabs.setLayoutManager(mIfaceLayoutManager);
         mBinding.ifaceTabs.setAdapter(mIfaceAdapter = new IfaceTabAdapter(this));
+        mIfaceAdapter.setOnTabOrderChangedListener(this::onTabOrderChanged);
+        // 0.1.118：长按接口 tab 拖动换位置（左右拖，全部位不可拖，松手才存一次）。
+        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, 0) {
+            @Override
+            public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                if (viewHolder.getAdapterPosition() == mIfaceAdapter.getItemCount() - 1) return 0;
+                return super.getMovementFlags(recyclerView, viewHolder);
+            }
+
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                int from = viewHolder.getAdapterPosition();
+                int to = target.getAdapterPosition();
+                if (from == mIfaceAdapter.getItemCount() - 1 || to == mIfaceAdapter.getItemCount() - 1) return false;
+                mIfaceAdapter.onMove(from, to);
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                mIfaceAdapter.dispatchOrderChanged();
+            }
+        }).attachToRecyclerView(mBinding.ifaceTabs);
         mBinding.type.setHasFixedSize(true);
         mBinding.type.setItemAnimator(null);
         mBinding.type.setAdapter(mAdapter = new TypeAdapter(this));
@@ -201,7 +235,11 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
 
     private void refreshIfaceTabs() {
         if (mIfaceAdapter == null) return;
-        mIfaceAdapter.refresh(enabledVodSubs(), ConfigManager.getActiveId());
+        // 0.1.118：一行只放前 4 个接口＋全部（第 5 个固定不滚动）。
+        List<ConfigManager.Sub> displayed = enabledVodSubs();
+        if (displayed.size() > 4) displayed = displayed.subList(0, 4);
+        if (mIfaceLayoutManager != null) mIfaceLayoutManager.setSpanCount(displayed.size() + 1);
+        mIfaceAdapter.refresh(displayed, ConfigManager.getActiveId());
     }
 
     /** 启用的点播订阅（接口在前、本地包在后，组内保持添加顺序）：tab 行与接口面板共用。 */
@@ -239,6 +277,11 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         if (TextUtils.isEmpty(ConfigManager.getActiveId())) return;
         ConfigManager.setActiveId("");
         ConfigManager.reloadVod(getCallback());
+    }
+
+    @Override
+    public void onTabOrderChanged(List<ConfigManager.Sub> subs) {
+        ConfigManager.saveVodOrder(subs);
     }
 
     private void onTypeMenu(View view) {

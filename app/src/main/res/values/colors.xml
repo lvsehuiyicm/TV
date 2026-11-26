@@ -38,4 +38,9 @@
     <!-- 直播竖屏选中频道的琥珀底色：写死 #F1BB6C，不用 ?attr/colorPrimary，因为 Material 动态取色会把它覆盖掉（实测选中的描边被动态取色改成了灰蓝色） -->
     <color name="live_selected">#F1BB6C</color>
 
+    <!-- 0.1.118：直播竖屏固定深色底（不跟主题壁纸） -->
+    <color name="live_dark_bg">#14161A</color>
+    <color name="live_dark_card">#22252B</color>
+    <color name="live_dark_pill">#2A2D33</color>
+
 </resources>

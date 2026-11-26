@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.1.118：直播竖屏网格胶囊的平时态（深色底），与 shape_live_grid_normal 同款 16dp 圆角。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/live_dark_pill" />
+    <corners android:radius="16dp" />
+</shape>

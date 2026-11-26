@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.ui.dialog;
 
+import android.content.DialogInterface;
 import android.text.InputType;
 import android.widget.EditText;
 
@@ -33,6 +34,7 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
     private SiteAdapter adapter;
     private GridLayoutManager layoutManager;
     private SpaceItemDecoration decoration;
+    private Runnable mOnDismiss;
 
     public static SiteDialog create() {
         return new SiteDialog();
@@ -46,9 +48,21 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
         return this;
     }
 
+    /** 0.1.118：关掉后回调（SitePickDialog 用它刷新列表）。 */
+    public SiteDialog onDismiss(Runnable runnable) {
+        mOnDismiss = runnable;
+        return this;
+    }
+
     public void show(Fragment fragment) {
         show(fragment.getChildFragmentManager(), null);
         if (fragment instanceof SiteListener) listener = (SiteListener) fragment;
+    }
+
+    @Override
+    public void onDismiss(@NonNull DialogInterface dialog) {
+        super.onDismiss(dialog);
+        if (mOnDismiss != null) mOnDismiss.run();
     }
 
     @Override

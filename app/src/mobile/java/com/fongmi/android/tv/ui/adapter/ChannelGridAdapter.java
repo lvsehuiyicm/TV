@@ -1,7 +1,6 @@
 package com.fongmi.android.tv.ui.adapter;
 
 import android.content.Context;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
@@ -105,7 +104,7 @@ public class ChannelGridAdapter extends RecyclerView.Adapter<ChannelGridAdapter.
         ensureColors(holder.itemView.getContext());
         holder.binding.name.setText(item.getShow());
         // 外观直接按 selectedPosition 定，不经过 selector / selected 状态——0.1.99 那条链路在真机上没起作用。
-        holder.binding.getRoot().setBackgroundResource(selected ? R.drawable.shape_live_grid_selected : R.drawable.shape_live_grid_normal);
+        holder.binding.getRoot().setBackgroundResource(selected ? R.drawable.shape_live_grid_selected : R.drawable.shape_live_grid_normal_dark);
         holder.binding.name.setTextColor(selected ? textColorSelected : textColorNormal);
         holder.binding.getRoot().setSelected(selected);
         holder.binding.getRoot().setOnClickListener(view -> listener.onItemClick(item));
@@ -121,11 +120,8 @@ public class ChannelGridAdapter extends RecyclerView.Adapter<ChannelGridAdapter.
     private void ensureColors(Context context) {
         if (colorsReady) return;
         textColorSelected = ContextCompat.getColor(context, R.color.black);
-        TypedValue value = new TypedValue();
-        // 注意：colorOnSurface 不在 app 自己的 R.attr 里（attrs.xml 没定义），必须用 Material 库的 R。
-        // 代码库里已有先例：DeviceAdapter 用 com.google.android.material.R.attr.colorOnSurfaceVariant。
-        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, value, true);
-        textColorNormal = value.data;
+        // 0.1.118：竖屏固定深色底，平时态字直接用白色，不再取主题 colorOnSurface。
+        textColorNormal = ContextCompat.getColor(context, R.color.white);
         colorsReady = true;
     }
 

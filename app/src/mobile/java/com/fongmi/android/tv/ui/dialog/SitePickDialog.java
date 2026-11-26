@@ -14,7 +14,7 @@ import com.fongmi.android.tv.ui.adapter.SitePickAdapter;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-public class SitePickDialog extends BaseAlertDialog {
+public class SitePickDialog extends BaseAlertDialog implements SiteListener, SitePickAdapter.OnItemLongClickListener {
 
     private DialogSitePickBinding binding;
     private SiteListener listener;
@@ -50,12 +50,32 @@ public class SitePickDialog extends BaseAlertDialog {
 
     @Override
     protected void initEvent() {
+        adapter.setOnItemLongClickListener(this);
         binding.cancel.setOnClickListener(v -> dismiss());
         binding.confirm.setOnClickListener(v -> {
             Site pending = adapter.getPending();
             if (pending != null && listener != null) listener.setSite(pending);
             dismiss();
         });
+    }
+
+    @Override
+    public void onItemLongClick(Site site) {
+        // 0.1.118：弹窗里长按某一行，打开现有 SiteDialog 管这个源（改名/删除/排序）。
+        SiteDialog.create().change().onDismiss(this::refreshList).show(this);
+    }
+
+    @Override
+    public void setSite(Site site) {
+        // SiteDialog 的转发：删首页源时靠它把 home 切到第一条（SiteDialog.deleteSite 的 wasHome 分支）。
+        if (listener != null) listener.setSite(site);
+    }
+
+    /** 管理完刷新列表：重建列表与首页源；空表时关掉弹窗。 */
+    private void refreshList() {
+        if (adapter == null) return;
+        adapter.refresh(SiteAdapter.buildList(), VodConfig.get().getHome().getKey());
+        if (adapter.getItemCount() == 0) dismiss();
     }
 
     @Override

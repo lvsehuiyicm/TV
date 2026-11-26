@@ -11,6 +11,7 @@ import com.fongmi.android.tv.databinding.AdapterIfaceTabBinding;
 import com.fongmi.android.tv.utils.ConfigManager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class IfaceTabAdapter extends RecyclerView.Adapter<IfaceTabAdapter.ViewHolder> {
@@ -36,6 +37,32 @@ public class IfaceTabAdapter extends RecyclerView.Adapter<IfaceTabAdapter.ViewHo
         items.addAll(subs);
         this.activeId = activeId == null ? "" : activeId;
         notifyDataSetChanged();
+    }
+
+    /** 拖拽用的内部列表引用（不要重建 Sub 对象——ConfigManager.saveVodOrder 靠它们排顺序）。 */
+    public List<ConfigManager.Sub> getSubs() {
+        return items;
+    }
+
+    public void onMove(int from, int to) {
+        Collections.swap(items, from, to);
+        notifyItemMoved(from, to);
+    }
+
+    public interface OnTabOrderChangedListener {
+
+        void onTabOrderChanged(List<ConfigManager.Sub> subs);
+    }
+
+    private OnTabOrderChangedListener orderListener;
+
+    public void setOnTabOrderChangedListener(OnTabOrderChangedListener listener) {
+        orderListener = listener;
+    }
+
+    /** 松手后调一次：把拖完的顺序交给 VodFragment 持久化。 */
+    public void dispatchOrderChanged() {
+        if (orderListener != null) orderListener.onTabOrderChanged(items);
     }
 
     @Override
