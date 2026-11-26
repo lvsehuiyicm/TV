@@ -37,6 +37,7 @@ import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.impl.LiveListener;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.ui.activity.ConfigActivity;
 import com.fongmi.android.tv.ui.activity.HistoryActivity;
 import com.fongmi.android.tv.ui.activity.KeepActivity;
 import com.fongmi.android.tv.ui.base.BaseFragment;
@@ -85,8 +86,8 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
 
     @Override
     protected void initView() {
-        mTabs = new TextView[]{mBinding.tabConfig, mBinding.tabPlayer, mBinding.tabTheme, mBinding.tabData};
-        mTabsTop = new TextView[]{mBinding.tabConfigTop, mBinding.tabPlayerTop, mBinding.tabThemeTop, mBinding.tabDataTop};
+        mTabs = new TextView[]{mBinding.tabPlayer, mBinding.tabTheme, mBinding.tabData};
+        mTabsTop = new TextView[]{mBinding.tabPlayerTop, mBinding.tabThemeTop, mBinding.tabDataTop};
         for (int i = 0; i < mTabs.length; i++) {
             int index = i;
             mTabs[i].setOnClickListener(v -> selectTab(index));
@@ -97,7 +98,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         mBinding.pageContent.getViewTreeObserver().addOnGlobalLayoutListener(mLayoutListener);
         mBinding.mineStatKeep.setOnClickListener(v -> KeepActivity.start(requireActivity()));
         mBinding.mineStatHistory.setOnClickListener(v -> HistoryActivity.start(requireActivity()));
-        mBinding.mineStatSite.setOnClickListener(v -> selectTab(0));
+        mBinding.mineStatSite.setOnClickListener(v -> ConfigActivity.start(requireActivity()));
         if (mTab >= mTabs.length) mTab = mTabs.length - 1;
         refreshMine();
         selectTab(mTab);
@@ -215,10 +216,9 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
 
     private Fragment createTab(int index) {
         return switch (index) {
-            case 0 -> ConfigFragment.newInstance(true);
-            case 1 -> SettingPlayerFragment.newInstance(true);
-            case 2 -> ThemeFragment.newInstance(true);
-            case 3 -> DataFragment.newInstance();
+            case 0 -> SettingPlayerFragment.newInstance(true);
+            case 1 -> ThemeFragment.newInstance(true);
+            case 2 -> DataFragment.newInstance();
             default -> null;
         };
     }

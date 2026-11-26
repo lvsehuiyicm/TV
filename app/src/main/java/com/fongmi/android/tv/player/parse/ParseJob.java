@@ -53,6 +53,8 @@ public class ParseJob implements ParseCallback {
     private Parse parse;
     private Map<String, String> parseHeaders;
     private String parseClick;
+    /** 直播解析：WebView 遇 Cloudflare 验证页直接判失败（不弹手动过验证弹窗），由上层换线。 */
+    private boolean failFastCloudflare;
 
     private ParseJob(ParseCallback callback) {
         this.executor = Executors.newSingleThreadExecutor();
@@ -63,6 +65,11 @@ public class ParseJob implements ParseCallback {
 
     public static ParseJob create(ParseCallback callback) {
         return new ParseJob(callback);
+    }
+
+    public ParseJob setFailFastCloudflare(boolean failFast) {
+        this.failFastCloudflare = failFast;
+        return this;
     }
 
     public ParseJob start(Result result, boolean useParse) {
@@ -257,7 +264,9 @@ public class ParseJob implements ParseCallback {
         }
         App.post(() -> {
             if (done.get()) return;
-            webViews.add(ParseWebView.create(App.get()).start(key, from, headers, url, click, callback, !url.contains("player/?url=")));
+            ParseWebView view = ParseWebView.create(App.get());
+            view.setFailFastCloudflare(failFastCloudflare);
+            webViews.add(view.start(key, from, headers, url, click, callback, !url.contains("player/?url=")));
         });
     }
 

@@ -62,6 +62,8 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
     private boolean stopped;
     private volatile boolean loadFailed;
     private boolean detect;
+    /** 直播解析：遇 Cloudflare 验证页直接判失败换线，不弹手动过验证的弹窗（点播保留弹窗）。 */
+    private boolean failFastCloudflare;
     private int pageGeneration;
     private String clickScript;
     private String from;
@@ -94,6 +96,10 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
         setting.setJavaScriptCanOpenWindowsAutomatically(false);
         setting.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         setWebViewClient(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new OreoClient() : new Client());
+    }
+
+    public void setFailFastCloudflare(boolean failFast) {
+        this.failFastCloudflare = failFast;
     }
 
     public ParseWebView start(String key, String from, Map<String, String> headers, String url, String click, ParseCallback callback, boolean detect) {
@@ -147,7 +153,7 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
             boolean cloudflare = WebViewCloudflare.isResource(uri);
             if (TextUtils.isEmpty(host) || (!cloudflare && WebViewRules.isAd(uri))) return WebViewRules.empty();
             Map<String, String> headers = request.getRequestHeaders();
-            if (WebViewCloudflare.isTurnstile(uri)) App.post(ParseWebView.this::showDialog);
+            if (!failFastCloudflare && WebViewCloudflare.isTurnstile(uri)) App.post(ParseWebView.this::showDialog);
             if (detect && PLAYER.matcher(url).find() && addUrl(url)) {
                 onParseAdd(headers, url);
             } else if (isVideoFormat(url)) {
@@ -167,8 +173,10 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
         @Override
         public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
             super.onReceivedHttpError(view, request, errorResponse);
-            if (WebViewCloudflare.isChallenge(errorResponse)) App.post(ParseWebView.this::showDialog);
-            else if (request.isForMainFrame()) onLoadError("HTTP", errorResponse.getStatusCode());
+            if (WebViewCloudflare.isChallenge(errorResponse)) {
+                if (failFastCloudflare) onLoadError("cloudflare", errorResponse.getStatusCode());
+                else App.post(ParseWebView.this::showDialog);
+            } else if (request.isForMainFrame()) onLoadError("HTTP", errorResponse.getStatusCode());
         }
 
         @Override
@@ -180,8 +188,10 @@ public final class ParseWebView extends WebView implements DialogInterface.OnDis
             Uri uri = Uri.parse(url);
             evaluateJavascript(WebViewCloudflare.CHECK_SCRIPT, value -> {
                 if (!current.getAsBoolean()) return;
-                if ("true".equalsIgnoreCase(value)) showDialog();
-                else WebViewRules.apply(ParseWebView.this, uri, clickScript, current);
+                if ("true".equalsIgnoreCase(value)) {
+                    if (failFastCloudflare) onLoadError("cloudflare", 0);
+                    else showDialog();
+                } else WebViewRules.apply(ParseWebView.this, uri, clickScript, current);
             });
         }
 

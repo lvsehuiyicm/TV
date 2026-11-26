@@ -80,13 +80,13 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, B
         setVisible();
         render = ResUtil.getStringArray(R.array.select_render);
         mBinding.renderText.setText(render[PlayerSetting.getRender()]);
-        mBinding.adblockText.setText(Setting.getSwitch(Setting.isAdblock()));
-        mBinding.libassText.setText(Setting.getSwitch(PlayerSetting.isLibass()));
-        mBinding.cronetText.setText(Setting.getSwitch(PlayerSetting.isCronet()));
+        mBinding.adblockSwitch.setChecked(Setting.isAdblock());
+        mBinding.libassSwitch.setChecked(PlayerSetting.isLibass());
+        mBinding.cronetSwitch.setChecked(PlayerSetting.isCronet());
         setBufferText();
         setMpvOptions();
         mBinding.backgroundText.setText((background = ResUtil.getStringArray(R.array.select_background))[PlayerSetting.getBackground()]);
-        mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
+        mBinding.incognitoSwitch.setChecked(Setting.isIncognito());
         refreshEngineCard();
         refreshDecodeCard();
         refreshDisplayText();
@@ -149,9 +149,8 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, B
         mBinding.dividerMpvGpuNext.setVisibility(mpv ? View.VISIBLE : View.GONE);
         mBinding.libass.setVisibility(exo ? View.VISIBLE : View.GONE);
         mBinding.dividerLibass.setVisibility(exo ? View.VISIBLE : View.GONE);
-        // 0.1.107：Cronet 只接 EXO 的 HTTP 层，MPV 下隐藏。
+        // 0.1.107：Cronet 只接 EXO 的 HTTP 层，MPV 下隐藏。（dividerCronet 已随分组拆卡去掉，cronet 是网络组最后一行。）
         mBinding.cronet.setVisibility(exo ? View.VISIBLE : View.GONE);
-        mBinding.dividerCronet.setVisibility(exo ? View.VISIBLE : View.GONE);
         mBinding.buffer.setVisibility(exo ? View.VISIBLE : View.GONE);
         mBinding.dividerBuffer.setVisibility(exo ? View.VISIBLE : View.GONE);
     }
@@ -285,8 +284,8 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, B
     private void setMpvOptions() {
         boolean motion = MpvUtil.isMotionEnabled();
         mBinding.mpvMotionText.setText(ResUtil.getStringArray(R.array.select_mpv_motion)[PlayerSetting.getMpvMotion()]);
-        mBinding.mpvGpuNextText.setText(Setting.getSwitch(PlayerSetting.isMpvGpuNext() || motion));
-        mBinding.mpvVulkanText.setText(Setting.getSwitch(PlayerSetting.isMpvVulkan() || motion));
+        mBinding.mpvGpuNextSwitch.setChecked(PlayerSetting.isMpvGpuNext() || motion);
+        mBinding.mpvVulkanSwitch.setChecked(PlayerSetting.isMpvVulkan() || motion);
         mBinding.mpvGpuNext.setEnabled(!motion);
         mBinding.mpvVulkan.setEnabled(!motion);
         mBinding.mpvGpuNext.setAlpha(motion ? 0.5f : 1f);
@@ -324,23 +323,23 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, B
 
     private void setAdblock(View view) {
         Setting.putAdblock(!Setting.isAdblock());
-        mBinding.adblockText.setText(Setting.getSwitch(Setting.isAdblock()));
+        mBinding.adblockSwitch.setChecked(Setting.isAdblock());
     }
 
     private void setIncognito(View view) {
         Setting.putIncognito(!Setting.isIncognito());
-        mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
+        mBinding.incognitoSwitch.setChecked(Setting.isIncognito());
     }
 
     private void setLibass(View view) {
         PlayerSetting.putLibass(!PlayerSetting.isLibass());
-        mBinding.libassText.setText(Setting.getSwitch(PlayerSetting.isLibass()));
+        mBinding.libassSwitch.setChecked(PlayerSetting.isLibass());
     }
 
     // 0.1.107：Cronet 开关，下次播放生效（ExoMediaSourceFactory 每次建 factory 时读）。
     private void setCronet(View view) {
         PlayerSetting.putCronet(!PlayerSetting.isCronet());
-        mBinding.cronetText.setText(Setting.getSwitch(PlayerSetting.isCronet()));
+        mBinding.cronetSwitch.setChecked(PlayerSetting.isCronet());
     }
 
     private void onPreload(View view) {

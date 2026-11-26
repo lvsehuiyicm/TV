@@ -857,7 +857,12 @@ public class PlayerManager implements ParseCallback {
         stopParse();
         pendingStartPositionMs = startPositionMs;
         spec = PlaySpec.fromParse(result, key, metadata).setEnding(endingMs);
-        parseJob = ParseJob.create(this).start(result, useParse);
+        parseJob = ParseJob.create(this).setFailFastCloudflare(isLive(metadata)).start(result, useParse);
+    }
+
+    /** 直播（MediaMetadata 带 TV_CHANNEL，见 MediaItemFactory.buildLiveMetadata）才对 Cloudflare 验证页快速失败、直接换线；点播保留手动过验证的弹窗。 */
+    private static boolean isLive(MediaMetadata metadata) {
+        return metadata != null && Integer.valueOf(MediaMetadata.MEDIA_TYPE_TV_CHANNEL).equals(metadata.mediaType);
     }
 
     private void stopParse() {

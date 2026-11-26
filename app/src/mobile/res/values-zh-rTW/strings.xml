@@ -128,12 +128,12 @@
     <string name="config_file_exists">該文件已添加</string>
     <string name="theme_setting">主題設置</string>
     <string name="theme_setting_desc">主題模式、背景圖、透明度</string>
-    <string name="theme_mode">主題模式</string>
-    <string name="theme_light">亮色</string>
-    <string name="theme_dark">暗色</string>
+    <string name="theme_mode">外觀模式</string>
+    <string name="theme_light">淺色</string>
+    <string name="theme_dark">深色</string>
     <string name="theme_system">跟隨系統</string>
-    <string name="theme_bg">背景圖</string>
-    <string name="theme_bg_alpha">背景透明度</string>
+    <string name="theme_bg">壁紙</string>
+    <string name="theme_bg_alpha">壁紙透明度</string>
     <string name="theme_bg_alpha_value">%1$d%%</string>
     <string name="theme_bg_none">無</string>
     <string name="theme_bg_1">春日綠</string>
@@ -150,4 +150,18 @@
     <string name="theme_bg_9">月白</string>
     <string name="mine_more_theme">更多外觀設置 ›</string>
     <string name="mine_source">源</string>
+    <string name="player_group_playback">播放</string>
+    <string name="player_group_display">畫面</string>
+    <string name="player_group_network">網絡</string>
+    <string name="player_group_advanced">高級</string>
+    <string name="theme_preview">效果預覽</string>
+    <string name="theme_alpha_hint">讓頁面底色帶一點壁紙顏色，卡片與文字保持清晰</string>
+    <string name="data_storage">存儲空間</string>
+    <string name="data_about">關於</string>
+    <string name="data_cache_used">快取佔用</string>
+    <string name="data_clear_cache">清理快取</string>
+    <string name="data_cache_note">清理快取不會刪除收藏、歷史和接口</string>
+    <string name="data_backup_desc">把接口、播放設置備份到本地文件，換手機也能恢復</string>
+    <string name="data_backup_now">立即備份</string>
+    <string name="data_restore_now">恢復備份</string>
 </resources>

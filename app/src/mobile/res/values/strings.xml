@@ -189,12 +189,12 @@
     <string name="config_file_exists">This file is already added</string>
     <string name="theme_setting">Theme settings</string>
     <string name="theme_setting_desc">Theme mode, background and opacity</string>
-    <string name="theme_mode">Theme mode</string>
+    <string name="theme_mode">Appearance mode</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_system">Follow system</string>
-    <string name="theme_bg">Background</string>
-    <string name="theme_bg_alpha">Background opacity</string>
+    <string name="theme_bg">Wallpaper</string>
+    <string name="theme_bg_alpha">Wallpaper opacity</string>
     <string name="theme_bg_alpha_value">%1$d%%</string>
     <string name="theme_bg_none">Moon white</string>
     <string name="theme_bg_1">Spring green</string>
@@ -217,4 +217,18 @@
     <string name="theme_bg_9">Moon white</string>
     <string name="mine_more_theme">More appearance settings ›</string>
     <string name="mine_source">Sources</string>
+    <string name="player_group_playback">Playback</string>
+    <string name="player_group_display">Display</string>
+    <string name="player_group_network">Network</string>
+    <string name="player_group_advanced">Advanced</string>
+    <string name="theme_preview">Preview</string>
+    <string name="theme_alpha_hint">Let the page show a hint of the wallpaper color, keeping cards and text clear</string>
+    <string name="data_storage">Storage</string>
+    <string name="data_about">About</string>
+    <string name="data_cache_used">Cache used</string>
+    <string name="data_clear_cache">Clear cache</string>
+    <string name="data_cache_note">Clearing the cache won\'t delete your favorites, history or interfaces</string>
+    <string name="data_backup_desc">Back up your interfaces and playback settings to a local file — restore them even on a new phone</string>
+    <string name="data_backup_now">Back up now</string>
+    <string name="data_restore_now">Restore backup</string>
 </resources>

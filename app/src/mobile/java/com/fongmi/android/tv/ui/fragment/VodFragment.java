@@ -32,7 +32,7 @@ import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.impl.FilterListener;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.model.SiteViewModel;
-import com.fongmi.android.tv.ui.activity.HomeActivity;
+import com.fongmi.android.tv.ui.activity.ConfigActivity;
 import com.fongmi.android.tv.ui.activity.SearchActivity;
 import com.fongmi.android.tv.ui.activity.VideoActivity;
 import com.fongmi.android.tv.ui.activity.WebActivity;
@@ -109,7 +109,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     @Override
     protected void initEvent() {
         mBinding.searchBtn.setOnClickListener(v -> SearchActivity.start(requireActivity()));
-        mBinding.settingsBtn.setOnClickListener(v -> ((HomeActivity) requireActivity()).change(1));
+        mBinding.settingsBtn.setOnClickListener(v -> ConfigActivity.start(requireActivity()));
         mBinding.sourceBar.setOnClickListener(v -> SitePickDialog.create().show(this));
         // 源管理（改名/删除/拖拽排序）仍保留：长按源条打开旧的 SiteDialog。
         mBinding.sourceBar.setOnLongClickListener(v -> {

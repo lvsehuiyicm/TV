@@ -189,12 +189,12 @@
     <string name="config_file_exists">该文件已添加</string>
     <string name="theme_setting">主题设置</string>
     <string name="theme_setting_desc">主题模式、背景图、透明度</string>
-    <string name="theme_mode">主题模式</string>
-    <string name="theme_light">亮色</string>
-    <string name="theme_dark">暗色</string>
+    <string name="theme_mode">外观模式</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
     <string name="theme_system">跟随系统</string>
-    <string name="theme_bg">背景图</string>
-    <string name="theme_bg_alpha">背景透明度</string>
+    <string name="theme_bg">壁纸</string>
+    <string name="theme_bg_alpha">壁纸透明度</string>
     <string name="theme_bg_alpha_value">%1$d%%</string>
     <string name="theme_bg_none">月白</string>
     <string name="theme_bg_1">春日绿</string>
@@ -217,4 +217,18 @@
     <string name="theme_bg_9">月白</string>
     <string name="mine_more_theme">更多外观设置 ›</string>
     <string name="mine_source">源</string>
+    <string name="player_group_playback">播放</string>
+    <string name="player_group_display">画面</string>
+    <string name="player_group_network">网络</string>
+    <string name="player_group_advanced">高级</string>
+    <string name="theme_preview">效果预览</string>
+    <string name="theme_alpha_hint">让页面底色带一点壁纸颜色，卡片与文字保持清晰</string>
+    <string name="data_storage">存储空间</string>
+    <string name="data_about">关于</string>
+    <string name="data_cache_used">缓存占用</string>
+    <string name="data_clear_cache">清理缓存</string>
+    <string name="data_cache_note">清理缓存不会删除收藏、历史和接口</string>
+    <string name="data_backup_desc">把接口、播放设置备份到本地文件，换手机也能恢复</string>
+    <string name="data_backup_now">立即备份</string>
+    <string name="data_restore_now">恢复备份</string>
 </resources>

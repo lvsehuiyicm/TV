@@ -17,14 +17,11 @@ import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.databinding.FragmentDataBinding;
 import com.fongmi.android.tv.db.BackupManager;
 import com.fongmi.android.tv.impl.Callback;
-import com.fongmi.android.tv.ui.activity.HistoryActivity;
-import com.fongmi.android.tv.ui.activity.KeepActivity;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.dialog.RestoreDialog;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class DataFragment extends BaseFragment {
 
@@ -47,10 +44,9 @@ public class DataFragment extends BaseFragment {
 
     @Override
     protected void initEvent() {
-        mBinding.backupRestore.setOnClickListener(this::onBackupRestore);
-        mBinding.cache.setOnClickListener(this::onCache);
-        mBinding.keep.setOnClickListener(v -> KeepActivity.start(requireActivity()));
-        mBinding.history.setOnClickListener(v -> HistoryActivity.start(requireActivity()));
+        mBinding.backupNow.setOnClickListener(v -> onBackup());
+        mBinding.restoreNow.setOnClickListener(v -> onRestore());
+        mBinding.clearCache.setOnClickListener(this::onCache);
         mBinding.version.setOnClickListener(this::onVersion);
     }
 
@@ -66,15 +62,6 @@ public class DataFragment extends BaseFragment {
                 mBinding.cacheText.setText(result);
             }
         });
-    }
-
-    private void onBackupRestore(View view) {
-        new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.setting_backup_restore)
-                .setPositiveButton(R.string.setting_backup, (dialog, which) -> onBackup())
-                .setNeutralButton(R.string.setting_restore, (dialog, which) -> onRestore())
-                .setNegativeButton(R.string.dialog_negative, null)
-                .show();
     }
 
     private void onBackup() {
