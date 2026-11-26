@@ -361,6 +361,15 @@ public class Spider extends com.github.catvod.crawler.Spider {
     // export a default are returned unchanged.
     private static String transformDrpySource(String content) {
         if (content == null) return content;
+        // 0.1.119：老式 TVBox JS 爬虫（如本地包的 live2vod.js）末尾用
+        // `__JS_SPIDER__ = {init, home, ...}` 把爬虫对象挂到全局变量上；但这里按 ES
+        // 模块求值（严格模式），给未声明的变量赋值直接抛 ReferenceError，整个爬虫
+        // 加载失败。app 里没有任何地方定义这个全局，先补一行模块作用域的声明，
+        // 赋值就不再抛错；追加的 export default 照常把函数交给 spider.js。
+        // drpy2 引擎与普通规则都不含这个串，不受影响。
+        if (content.contains("__JS_SPIDER__") && !content.contains("var __JS_SPIDER__") && !content.contains("let __JS_SPIDER__") && !content.contains("const __JS_SPIDER__")) {
+            content = "var __JS_SPIDER__;\n" + content;
+        }
         if (content.contains("class Spider") || content.contains("extends Spider")) return content;
         if (content.contains("export default")) return content;
         if (content.contains("var rule") || content.contains("let rule") || content.contains("const rule")) {

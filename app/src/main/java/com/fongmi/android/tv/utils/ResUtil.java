@@ -23,8 +23,14 @@ import androidx.annotation.StringRes;
 import androidx.core.content.ContextCompat;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.setting.Setting;
 
 public class ResUtil {
+
+    /** 0.1.119：是否默认壁纸（内置壁纸 0 且类型 0）。首页深色覆写只在默认壁纸时生效，切到别的壁纸时走原主题渲染。 */
+    public static boolean isDefaultWall() {
+        return Setting.getWall() == 0 && Setting.getWallType() == 0;
+    }
 
     public static DisplayMetrics getDisplayMetrics() {
         return getDisplayMetrics(App.get());

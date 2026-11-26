@@ -3,7 +3,6 @@ package com.fongmi.android.tv.ui.activity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -69,7 +68,6 @@ import com.fongmi.android.tv.ui.dialog.CastDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.InfoDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
-import com.fongmi.android.tv.ui.dialog.LiveInfoDialog;
 import com.fongmi.android.tv.ui.dialog.PassDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerEngineDialog;
 import com.fongmi.android.tv.ui.dialog.DecoderSettingDialog;
@@ -111,10 +109,12 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
     private Runnable mR2;
     private Runnable mR3;
     private Runnable mR4;
-    // 0.1.118：竖屏分组行固定 4 项（央视/卫视/地方/全部），全部模式下竖屏频道网格显示全部的台。
-    private boolean mPortAll;
+    // 0.1.118：竖屏分组行固定 4 项（央视/卫视/地方/全部）；0.1.119：“全部”是展开开关——
+    // 点一下展开显示全部可见分组，再点一下收回固定 4 项，频道网格永远只显示一个分组的台。
+    private boolean mPortExpanded;
     private Group mAllGroup;
-    private List<Channel> mAllChannels = new ArrayList<>();
+    private List<Group> mPortGroups = new ArrayList<>();
+    private List<Group> mPort4 = new ArrayList<>();
     private Epg mEpg;
     private List<Group> mHides;
     private Group mGroup;
@@ -233,19 +233,6 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
         // 0.1.101：5 个彩色按钮整行拿掉了；0.1.102：四方格图标也拿掉了（分组改成 4 列网格全露出来）。
         // 竖屏只剩视频右下角全屏图标（点一下进横屏；双击视频也是进全屏，见 onDoubleTap）。
         mBinding.btnPortFullscreen.setOnClickListener(view -> onFullscreenClick());
-        // 0.1.118：竖屏 5 个彩色圆按钮回来了（全屏/推送/收藏/简介/菜单）。
-        mBinding.btnPortFull.setOnClickListener(view -> onFullscreenClick());
-        mBinding.btnPortCast.setOnClickListener(view -> onCast());
-        mBinding.btnPortKeep.setOnClickListener(view -> {
-            if (mChannel == null || mGroup == null) return;
-            onLongClick(mChannel);
-            updatePortKeep();
-        });
-        mBinding.btnPortInfo.setOnClickListener(view -> {
-            if (mChannel == null) return;
-            LiveInfoDialog.create(mChannel, mEpg == null ? new EpgData() : mEpg.getEpgData()).show(this);
-        });
-        mBinding.btnPortMenu.setOnClickListener(view -> showControl());
     }
 
     private void setPortraitView() {
@@ -363,19 +350,17 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
         mGroupAdapter.addAll(items);
         // 0.1.118：竖屏分组行固定 4 项（央视/卫视/地方/全部），不再列出全部分组；
         // 横屏左侧分组栏不动（全部分组原顺序）。0.1.101 的过滤（竖屏不要"收藏"）随之作废——
-        // 固定 4 项里本来就没有收藏。
+        // 固定 4 项里本来就没有收藏。0.1.119：点"全部"展开显示全部可见分组（开关），再点收回。
         List<Group> port = filterPortGroups(items);
-        List<Group> port4 = new ArrayList<>();
-        port4.add(findTierGroup(port, 0));
-        port4.add(findTierGroup(port, 1));
-        port4.add(findTierGroup(port, 2));
+        mPortGroups = port;
+        mPort4 = new ArrayList<>();
+        mPort4.add(findTierGroup(port, 0));
+        mPort4.add(findTierGroup(port, 1));
+        mPort4.add(findTierGroup(port, 2));
         mAllGroup = new Group(ResUtil.getString(R.string.iface_all));
-        mAllChannels.clear();
-        for (Group group : port) mAllChannels.addAll(group.getChannel());
-        mAllGroup.setChannel(new ArrayList<>(mAllChannels));
-        port4.add(mAllGroup);
-        mPortAll = false;
-        mPortGroupAdapter.addAll(port4);
+        mPort4.add(mAllGroup);
+        mPortExpanded = false;
+        mPortGroupAdapter.addAll(mPort4);
         if (mGroup != null) mPortGroupAdapter.setSelected(tierIndexOf(mGroup));
         setPosition(LiveConfig.get().findKeepPosition(items));
     }
@@ -395,16 +380,6 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
         if (name.startsWith("卫视")) return 1;
         if (name.startsWith("地方") || name.startsWith("省内")) return 2;
         return -1;
-    }
-
-    /** 全部模式下找台的真实所属分组（按名找包含它的可见分组），找不到返回 null。 */
-    private Group findOwnerGroup(Channel item) {
-        for (int i = 0; i < mGroupAdapter.getItemCount(); i++) {
-            Group group = mGroupAdapter.get(i);
-            if (group.isKeep()) continue;
-            if (group.getChannel().contains(item)) return group;
-        }
-        return null;
     }
 
     /** 竖屏分组 tab 的分组列表：去掉收藏分组。 */
@@ -728,15 +703,22 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
 
     @Override
     public void onItemClick(Group item) {
-        // 0.1.118：点"全部"不调 selectGroup——竖屏频道网格直接显示全部的台，横屏侧边栏不动。
+        // 0.1.119：点"全部"是开关——收起态展开显示全部可见分组，再点收回固定 4 项；
+        // 频道网格不动（仍显示当前分组的台），不调 selectGroup。
         if (item == mAllGroup) {
-            mPortAll = true;
-            mPortGroupAdapter.setSelected(3);
-            mPortChannelAdapter.addAll(mAllChannels);
-            if (mChannel != null) mPortChannelAdapter.setSelected(mAllChannels.indexOf(mChannel));
+            if (mPortExpanded) {
+                mPortExpanded = false;
+                mPortGroupAdapter.addAll(mPort4);
+                mPortGroupAdapter.setSelected(tierIndexOf(mGroup));
+            } else {
+                mPortExpanded = true;
+                List<Group> expanded = new ArrayList<>(mPortGroups);
+                expanded.add(mAllGroup);
+                mPortGroupAdapter.addAll(expanded);
+                mPortGroupAdapter.setSelected(indexOfPortGroup(mGroup));
+            }
             return;
         }
-        mPortAll = false;
         // 0.1.102：点分组网格里的分组，就只显示那个分组的频道（四方格展开开关已经拿掉了，不用复位）。
         mLive.selectGroup(item);
         scrollToPosition(mBinding.channel, Math.max(item.getPosition(), 0));
@@ -755,9 +737,7 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
         if (!item.getData(mViewModel.getZoneId()).getList().isEmpty() && item.isSelected() && current) {
             if (ResUtil.isLand(this)) showEpg(item);
         } else if (mGroup != null && (!current || ResUtil.isLand(this))) {
-            // 0.1.118：全部模式下网格里是全部的台，点到的台要找回它真实所属的分组再切。
-            Group owner = mPortAll ? findOwnerGroup(item) : null;
-            mLive.selectChannel(item.group(owner != null ? owner : mGroup));
+            mLive.selectChannel(item.group(mGroup));
         }
     }
 
@@ -807,7 +787,6 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
         mBinding.control.action.line.setVisibility(mBinding.widget.line.getVisibility());
         updatePortInfo();
         renderPortProgram();
-        updatePortKeep();
         App.post(mR4, 30000);
     }
 
@@ -846,13 +825,6 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
     private void refreshPortProgram() {
         renderPortProgram();
         App.post(mR4, 30000);
-    }
-
-    /** 0.1.118：竖屏收藏按钮底色——已收藏琥珀红，未收藏深灰。 */
-    private void updatePortKeep() {
-        if (mChannel == null) return;
-        boolean kept = Keep.exist(mChannel.getName());
-        mBinding.btnPortKeep.setBackgroundTintList(ColorStateList.valueOf(ResUtil.getColor(kept ? R.color.live_btn_keep : R.color.live_dark_pill)));
     }
 
     private void onEpgLoaded(Epg epg) {
@@ -960,14 +932,20 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
     @Override
     public void renderGroupSelection(Group group) {
         mGroupAdapter.setSelected(mGroup = group);
-        // 0.1.118：竖屏分组行只有固定 4 项，真实分组按名前缀映射到对应档位；不在三档里的分组（如 4K）竖屏不标选中。
-        mPortGroupAdapter.setSelected(tierIndexOf(group));
+        // 0.1.119：竖屏分组行按当前数据集取下标——收起态按名前缀映射到固定 4 项里的档位，
+        // 展开态在当前表里找该分组对象；不在表里（如 4K）不标选中。
+        mPortGroupAdapter.setSelected(mPortExpanded ? indexOfPortGroup(group) : tierIndexOf(group));
+    }
+
+    /** 展开表里找分组对象的下标（同一批对象，== 比较），找不到为 -1。 */
+    private int indexOfPortGroup(Group group) {
+        if (group == null) return -1;
+        for (int i = 0; i < mPortGroupAdapter.getItemCount(); i++) if (mPortGroupAdapter.get(i) == group) return i;
+        return -1;
     }
 
     @Override
     public void renderGroupChannels(Group group) {
-        // 0.1.118：控制器驱动的分组切换一律退出全部模式。
-        mPortAll = false;
         mChannelAdapter.addAll(group.getChannel());
         mChannelAdapter.setSelected(group.getPosition());
         // 0.1.102：竖屏网格只显示当前分组的频道（四方格展开开关拿掉了），点哪个分组就换成那个分组的频道。
@@ -977,16 +955,6 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
 
     @Override
     public void renderChannelSelection(Channel channel) {
-        // 0.1.118：全部模式下竖屏网格显示的是全表，不走横屏那套重分组——跳过 channel.group(mGroup)，
-        // 否则会把别的分组的台错划到当前分组；横屏侧边栏在全部模式下不更新选中，切回横屏时 setPosition() 按台的真实分组定位。
-        if (mPortAll) {
-            mChannel = channel;
-            mPortChannelAdapter.setSelected(mAllChannels.indexOf(channel));
-            setArtwork();
-            showInfo();
-            hideUI();
-            return;
-        }
         int position = mChannelAdapter.setSelected(channel.group(mGroup));
         if (mGroup != null) mGroup.setPosition(position);
         mChannel = channel;
@@ -1040,9 +1008,8 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
         mHides.clear();
         mChannel = null;
         mGroup = null;
-        // 0.1.118：退出全部模式，清掉合成的全部表与节目数据。
-        mPortAll = false;
-        mAllChannels.clear();
+        // 0.1.119：收起展开态，丢掉开关项（下次 setGroup 重建）；频道合成表已不存在。
+        mPortExpanded = false;
         mAllGroup = null;
         mEpg = null;
     }

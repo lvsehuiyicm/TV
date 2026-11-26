@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="#F1BB6C" />
-</shape>
+<!-- 0.1.119：圆盘从占满 40dp 缩到 28dp（inset 6dp），和旁边齿轮的 20dp 字形视觉一致；View 仍是 40dp，触摸区不变。 -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="6dp">
+    <shape android:shape="oval">
+        <solid android:color="#F1BB6C" />
+    </shape>
+</inset>

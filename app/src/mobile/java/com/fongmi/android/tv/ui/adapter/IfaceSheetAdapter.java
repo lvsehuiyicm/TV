@@ -12,6 +12,7 @@ import com.fongmi.android.tv.databinding.AdapterIfaceSheetBinding;
 import com.fongmi.android.tv.utils.ConfigManager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class IfaceSheetAdapter extends RecyclerView.Adapter<IfaceSheetAdapter.ViewHolder> {
@@ -47,6 +48,34 @@ public class IfaceSheetAdapter extends RecyclerView.Adapter<IfaceSheetAdapter.Vi
         this.rows.addAll(rows);
         this.activeId = activeId == null ? "" : activeId;
         notifyDataSetChanged();
+    }
+
+    /** 拖拽用的订阅列表（跳过首行“全部接口”，Sub 对象本身不重建——ConfigManager.saveVodOrder 靠它们排顺序）。 */
+    public List<ConfigManager.Sub> getSubs() {
+        List<ConfigManager.Sub> subs = new ArrayList<>();
+        for (Row row : rows) if (row.sub != null) subs.add(row.sub);
+        return subs;
+    }
+
+    public void onMove(int from, int to) {
+        Collections.swap(rows, from, to);
+        notifyItemMoved(from, to);
+    }
+
+    public interface OnOrderChangedListener {
+
+        void onIfaceOrderChanged(List<ConfigManager.Sub> subs);
+    }
+
+    private OnOrderChangedListener orderListener;
+
+    public void setOnOrderChangedListener(OnOrderChangedListener listener) {
+        orderListener = listener;
+    }
+
+    /** 松手后调一次：把拖完的顺序交给 IfaceSheetDialog 持久化。 */
+    public void dispatchOrderChanged() {
+        if (orderListener != null) orderListener.onIfaceOrderChanged(getSubs());
     }
 
     @Override

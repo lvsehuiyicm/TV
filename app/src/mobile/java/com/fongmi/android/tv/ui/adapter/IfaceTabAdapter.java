@@ -4,11 +4,13 @@ import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.AdapterIfaceTabBinding;
 import com.fongmi.android.tv.utils.ConfigManager;
+import com.fongmi.android.tv.utils.ResUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,6 +80,11 @@ public class IfaceTabAdapter extends RecyclerView.Adapter<IfaceTabAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        // 0.1.119：默认壁纸时 tab 覆写深色（选中琥珀、未选中深灰药丸、白字），每次绑定现算开关值；
+        // 切到别的壁纸时恢复原 selector。
+        boolean dark = ResUtil.isDefaultWall();
+        holder.binding.text.setBackground(ResUtil.getDrawable(dark ? R.drawable.selector_iface_tab_bg_dark : R.drawable.selector_iface_tab_bg));
+        holder.binding.text.setTextColor(ContextCompat.getColorStateList(holder.itemView.getContext(), dark ? R.color.selector_iface_text_dark : R.color.selector_iface_text));
         if (position < items.size()) {
             ConfigManager.Sub sub = items.get(position);
             holder.binding.text.setText(sub.name);

@@ -14,12 +14,6 @@
         android:visible="false" />
 
     <item
-        android:id="@+id/local"
-        android:icon="@drawable/ic_nav_local"
-        android:title="@string/nav_local"
-        android:visible="false" />
-
-    <item
         android:id="@+id/setting"
         android:icon="@drawable/ic_nav_mine"
         android:title="@string/nav_mine"

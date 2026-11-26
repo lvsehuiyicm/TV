@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.1.119：selector_iface_tab_bg 的深色版（默认壁纸时首页接口 tab 用），与原文件同形（圆角 16dp）；选中琥珀不变，未选中取直播同款 live_dark_pill。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#F1BB6C" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#2A2D33" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+</selector>

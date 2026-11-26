@@ -10,12 +10,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fongmi.android.tv.Product;
+import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Class;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Style;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.AdapterSectionBinding;
+import com.fongmi.android.tv.utils.ResUtil;
+import com.google.android.material.color.MaterialColors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -109,6 +112,13 @@ public class SectionAdapter extends RecyclerView.Adapter<SectionAdapter.ViewHold
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Section section = mItems.get(position);
+        // 0.1.119：默认壁纸时分区头覆写深色（标题白字、“全部”深色药丸+白字），每次绑定现算开关值；
+        // 切到别的壁纸时恢复原 shape 与主题色。占位图、海报不动。
+        boolean dark = ResUtil.isDefaultWall();
+        int onSurface = dark ? ResUtil.getColor(R.color.white) : MaterialColors.getColor(holder.itemView, com.google.android.material.R.attr.colorOnSurface);
+        holder.binding.name.setTextColor(onSurface);
+        holder.binding.all.setBackground(ResUtil.getDrawable(dark ? R.drawable.shape_top_pill_dark : R.drawable.shape_top_pill));
+        holder.binding.all.setTextColor(onSurface);
         holder.binding.name.setText(section.type.getTypeName());
         holder.binding.all.setOnClickListener(v -> listener.onSectionAllClick(section.type));
         holder.binding.placeholder.setVisibility(section.loaded ? View.GONE : View.VISIBLE);

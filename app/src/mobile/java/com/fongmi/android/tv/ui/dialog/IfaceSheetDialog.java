@@ -6,7 +6,9 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
@@ -34,6 +36,7 @@ public class IfaceSheetDialog extends BaseBottomSheetDialog implements IfaceShee
 
     private DialogIfaceSheetBinding binding;
     private OnSelectListener listener;
+    private OnOrderChangedListener orderListener;
     private List<ConfigManager.Sub> subs;
     private IfaceSheetAdapter adapter;
 
@@ -49,6 +52,7 @@ public class IfaceSheetDialog extends BaseBottomSheetDialog implements IfaceShee
     public void show(Fragment fragment) {
         show(fragment.getChildFragmentManager(), null);
         if (fragment instanceof OnSelectListener) listener = (OnSelectListener) fragment;
+        if (fragment instanceof OnOrderChangedListener) orderListener = (OnOrderChangedListener) fragment;
     }
 
     public interface OnSelectListener {
@@ -56,6 +60,11 @@ public class IfaceSheetDialog extends BaseBottomSheetDialog implements IfaceShee
         void onIfaceSelected(ConfigManager.Sub sub);
 
         void onAllSelected();
+    }
+
+    public interface OnOrderChangedListener {
+
+        void onIfaceOrderChanged(List<ConfigManager.Sub> subs);
     }
 
     @Override
@@ -69,10 +78,43 @@ public class IfaceSheetDialog extends BaseBottomSheetDialog implements IfaceShee
         rows.add(new IfaceSheetAdapter.Row(null, null));
         if (subs != null) for (ConfigManager.Sub sub : subs) rows.add(new IfaceSheetAdapter.Row(sub, countText(sub)));
         adapter = new IfaceSheetAdapter(this);
+        adapter.setOnOrderChangedListener(subs -> {
+            if (orderListener != null) orderListener.onIfaceOrderChanged(subs);
+        });
         binding.recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.recycler.setAdapter(adapter);
         binding.recycler.setItemAnimator(null);
         binding.recycler.setHasFixedSize(true);
+        // 0.1.119：长按行上下拖动换位置（照搬首页 tab 行的模式）；首行“全部接口”不可拖，
+        // 跨组（在线接口 ↔ 本地包）不让拖——列表每次读都按在线在前、本地在后重排，跨组拖了也会弹回去。
+        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            @Override
+            public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                if (viewHolder.getAdapterPosition() == 0) return 0;
+                return super.getMovementFlags(recyclerView, viewHolder);
+            }
+
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                int from = viewHolder.getAdapterPosition();
+                int to = target.getAdapterPosition();
+                if (from == 0 || to == 0) return false;
+                List<ConfigManager.Sub> subs = adapter.getSubs();
+                if (subs.get(from - 1).isInterface() != subs.get(to - 1).isInterface()) return false;
+                adapter.onMove(from, to);
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                adapter.dispatchOrderChanged();
+            }
+        }).attachToRecyclerView(binding.recycler);
         adapter.refresh(rows, ConfigManager.getActiveId());
     }
 
