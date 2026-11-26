@@ -166,6 +166,13 @@
     <string name="config_active">使用中</string>
     <string name="config_all_interfaces">全部接口</string>
     <string name="config_interface">切换接口</string>
+    <string name="iface_all">全部</string>
+    <string name="iface_source_count">%1$d个源</string>
+    <string name="site_switch">切换片源</string>
+    <string name="site_current">当前使用</string>
+    <string name="site_source">片源：%1$s</string>
+    <string name="site_interface">接口：%1$s</string>
+    <string name="config_manage_iface">管理接口</string>
     <string name="config_kind_folder">文件夹</string>
     <string name="config_kind_file">单源</string>
     <string name="config_kind_url">在线接口</string>

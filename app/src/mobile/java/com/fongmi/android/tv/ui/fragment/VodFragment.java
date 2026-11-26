@@ -1,8 +1,8 @@
 package com.fongmi.android.tv.ui.fragment;
 
+import android.content.res.ColorStateList;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -29,19 +29,23 @@ import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.impl.FilterListener;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.model.SiteViewModel;
-import com.fongmi.android.tv.ui.activity.HistoryActivity;
-import com.fongmi.android.tv.ui.activity.KeepActivity;
+import com.fongmi.android.tv.ui.activity.HomeActivity;
 import com.fongmi.android.tv.ui.activity.SearchActivity;
 import com.fongmi.android.tv.ui.activity.VideoActivity;
 import com.fongmi.android.tv.ui.activity.WebActivity;
+import com.fongmi.android.tv.ui.adapter.IfaceTabAdapter;
 import com.fongmi.android.tv.ui.adapter.SectionAdapter;
 import com.fongmi.android.tv.ui.adapter.TypeAdapter;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.dialog.FilterDialog;
+import com.fongmi.android.tv.ui.dialog.IfaceSheetDialog;
 import com.fongmi.android.tv.ui.dialog.ReceiveDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
+import com.fongmi.android.tv.ui.dialog.SitePickDialog;
+import com.fongmi.android.tv.utils.CheckStore;
 import com.fongmi.android.tv.utils.ConfigManager;
 import com.fongmi.android.tv.utils.Notify;
+import com.fongmi.android.tv.utils.SourceChecker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.greenrobot.eventbus.EventBus;
@@ -49,19 +53,18 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
-public class VodFragment extends BaseFragment implements ConfigListener, SiteListener, FilterListener, TypeAdapter.OnClickListener, SectionAdapter.OnClickListener {
+public class VodFragment extends BaseFragment implements ConfigListener, SiteListener, FilterListener, TypeAdapter.OnClickListener, SectionAdapter.OnClickListener, IfaceTabAdapter.OnClickListener, IfaceSheetDialog.OnSelectListener {
 
     private FragmentVodBinding mBinding;
     private SiteViewModel mViewModel;
     private TypeAdapter mAdapter;
     private SectionAdapter mSectionAdapter;
+    private IfaceTabAdapter mIfaceAdapter;
     private Result mResult;
     private FolderFragment mFocused;
     private Class mFocusedType;
@@ -84,10 +87,6 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         return VodConfig.get().getSite(getHome().getKey());
     }
 
-    private Config getConfig() {
-        return VodConfig.get().getConfig();
-    }
-
     @Override
     protected ViewBinding getBinding(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
         return mBinding = FragmentVodBinding.inflate(inflater, container, false);
@@ -99,21 +98,29 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         setRecyclerView();
         setViewModel();
         showProgress();
-        setTitle();
-        setIface();
+        setSourceBar();
+        refreshIfaceTabs();
     }
 
     @Override
     protected void initEvent() {
-        mBinding.ifacePill.setOnClickListener(this::onIface);
-        mBinding.sourcePill.setOnClickListener(this::onSite);
+        mBinding.searchBtn.setOnClickListener(v -> SearchActivity.start(requireActivity()));
+        mBinding.settingsBtn.setOnClickListener(v -> ((HomeActivity) requireActivity()).change(1));
+        mBinding.sourceBar.setOnClickListener(v -> SitePickDialog.create().show(this));
+        // 源管理（改名/删除/拖拽排序）仍保留：长按源条打开旧的 SiteDialog。
+        mBinding.sourceBar.setOnLongClickListener(v -> {
+            SiteDialog.create().change().show(this);
+            return true;
+        });
         mBinding.typeMenu.setOnClickListener(this::onTypeMenu);
         mBinding.top.setOnClickListener(this::onTop);
         mBinding.filter.setOnClickListener(this::onFilter);
-        mBinding.toolbar.setOnMenuItemClickListener(this::onMenuItemClick);
     }
 
     private void setRecyclerView() {
+        mBinding.ifaceTabs.setHasFixedSize(true);
+        mBinding.ifaceTabs.setItemAnimator(null);
+        mBinding.ifaceTabs.setAdapter(mIfaceAdapter = new IfaceTabAdapter(this));
         mBinding.type.setHasFixedSize(true);
         mBinding.type.setItemAnimator(null);
         mBinding.type.setAdapter(mAdapter = new TypeAdapter(this));
@@ -140,6 +147,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         setFabVisible();
         hideProgress();
         showContent();
+        setSourceBar();
         if (mAutoFirst && mAdapter.getItemCount() > 0 && !isFocused()) {
             mAutoFirst = false;
             onItemClick(0, mAdapter.get(0));
@@ -171,25 +179,33 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         else mBinding.filter.setVisibility(View.GONE);
     }
 
-    private void setTitle() {
-        // 0.1.111：顶栏不再显示应用名“烛龙”。加载期间 home 已被 clear() 置空
-        // （getHome() 返回空 Site，名字是 ""），配置名那一环也是空的，原来
-        // 的链就一路掉到应用名，慢网下“烛龙 + 空白”要停 7–20 秒，看着像切坏了。
-        // 第三环改成当前激活的接口名：activateVod 在加载开始前已把 activeId 置
-        // 成目标接口，失败回退时 guarded 回调又把它恢复成旧接口，所以加载中顶栏
-        // 显示目标接口名（如 RRZY），失败后显示旧接口名，成功后首页源名接管。
-        // 无激活接口时（全新安装）才继续掉到应用名。
-        List<String> items = Arrays.asList(getHome().getName(), getConfig().getName(), ConfigManager.getActiveName(), getString(R.string.app_name));
-        Optional<String> optional = items.stream().filter(s -> !TextUtils.isEmpty(s)).findFirst();
-        optional.ifPresent(s -> mBinding.title.setText(s));
+    private void setSourceBar() {
+        // 0.1.117：片源条显示当前首页源名。加载中 home 为空时保留上一次显示，不闪空白；
+        // 顶栏标题现在是静态“烛龙”，0.1.111 的“烛龙＋空白”问题已不存在。
+        Site home = getHome();
+        if (TextUtils.isEmpty(home.getName())) return;
+        mBinding.sourceName.setText(getString(R.string.site_source, home.getName()));
+        // 健康点：与 SiteAdapter.onBindViewHolder 同款逻辑；key 为空（加载中的空 Site）时不查。
+        if (home.getKey() == null) {
+            mBinding.sourceDot.setVisibility(View.GONE);
+            return;
+        }
+        int grade = CheckStore.getSiteGrade(home.getKey());
+        if (grade == SourceChecker.GRADE_NONE) {
+            String activeId = ConfigManager.getActiveId();
+            if (activeId != null && !activeId.isEmpty()) grade = CheckStore.getSiteGrade(activeId + "|" + home.getKey());
+        }
+        mBinding.sourceDot.setVisibility(grade == SourceChecker.GRADE_NONE ? View.GONE : View.VISIBLE);
+        if (grade != SourceChecker.GRADE_NONE) mBinding.sourceDot.setBackgroundTintList(ColorStateList.valueOf(SourceChecker.gradeColor(grade)));
     }
 
-    private void setIface() {
-        String name = ConfigManager.getActiveName();
-        mBinding.iface.setText(name == null ? getString(R.string.config_all_interfaces) : name);
+    private void refreshIfaceTabs() {
+        if (mIfaceAdapter == null) return;
+        mIfaceAdapter.refresh(enabledVodSubs(), ConfigManager.getActiveId());
     }
 
-    private void onIface(View view) {
+    /** 启用的点播订阅（接口在前、本地包在后，组内保持添加顺序）：tab 行与接口面板共用。 */
+    private static List<ConfigManager.Sub> enabledVodSubs() {
         List<ConfigManager.Sub> subs = ConfigManager.getSubs(ConfigManager.TAB_VOD);
         List<ConfigManager.Sub> enabled = new ArrayList<>();
         for (ConfigManager.Sub sub : subs) if (sub.enabled) enabled.add(sub);
@@ -198,29 +214,31 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         // 翻找、滑到最上面才看到。分组后在线接口固定在顶部，一眼找到。
         // 用稳定排序原地排（各组内保持添加顺序），不重赋值 enabled（lambda 要捕获它）。
         enabled.sort((a, b) -> Boolean.compare(!a.isInterface(), !b.isInterface()));
-        String[] items = new String[enabled.size() + 1];
-        items[0] = getString(R.string.config_all_interfaces);
-        for (int i = 0; i < enabled.size(); i++) items[i + 1] = enabled.get(i).name;
-        int checked = 0;
-        String activeId = ConfigManager.getActiveId();
-        for (int i = 0; i < enabled.size(); i++) if (enabled.get(i).id.equals(activeId)) checked = i + 1;
-        int checkedIndex = checked;
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.config_interface).setSingleChoiceItems(items, checked, (d, which) -> {
-            d.dismiss();
-            if (which == 0) {
-                ConfigManager.setActiveId("");
-                ConfigManager.reloadVod(getCallback());
-            } else {
-                ConfigManager.activateVod(enabled.get(which - 1), getCallback());
-            }
-            setIface();
-        }).show();
-        // 0.1.96：打开对话框时把列表定位到当前选中的接口。单选列表默认不一定滚到选中项，
-        // 列表长时用户打开只能看到顶部，当前项（比如 RRZY）在下面看不到，切换时容易迷路。
-        dialog.setOnShowListener(d -> {
-            android.widget.ListView listView = dialog.getListView();
-            if (listView != null) listView.setSelection(checkedIndex);
-        });
+        return enabled;
+    }
+
+    @Override
+    public void onIfaceClick(ConfigManager.Sub sub) {
+        if (sub.id.equals(ConfigManager.getActiveId())) return;
+        ConfigManager.activateVod(sub, getCallback());
+    }
+
+    @Override
+    public void onAllClick() {
+        IfaceSheetDialog.create().items(enabledVodSubs()).show(this);
+    }
+
+    @Override
+    public void onIfaceSelected(ConfigManager.Sub sub) {
+        if (sub.id.equals(ConfigManager.getActiveId())) return;
+        ConfigManager.activateVod(sub, getCallback());
+    }
+
+    @Override
+    public void onAllSelected() {
+        if (TextUtils.isEmpty(ConfigManager.getActiveId())) return;
+        ConfigManager.setActiveId("");
+        ConfigManager.reloadVod(getCallback());
     }
 
     private void onTypeMenu(View view) {
@@ -238,11 +256,11 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 mAutoFirst = true;
                 showProgress();
                 hideContent();
-                setTitle();
-                // 0.1.108：每次加载开始都把顶栏接口名刷成当前 activeId。自动换源/
-                // 回退改了 activeId 后不刷，pill 会停在用户点的接口名上，而实际已是
-                // 另一个接口——正是“pill 是 demo.json、对话框选中 RRZY”的错位。
-                setIface();
+                setSourceBar();
+                // 0.1.108：每次加载开始都把 tab 选中态刷成当前 activeId。自动换源/
+                // 回退改了 activeId 后不刷，tab 会停在用户点的接口上，而实际已是
+                // 另一个接口。
+                refreshIfaceTabs();
             }
 
             @Override
@@ -250,14 +268,14 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 Notify.dismiss();
                 Notify.show(msg);
                 showContent();
-                // 0.1.97：报错后把顶栏接口名刷回真实的 activeId。切换失败时
-                // guarded 回调已把 activeId 恢复成旧接口，但顶栏还停在新接口 X
-                // 上（点选时 setIface() 已改成 X），不刷就会“顶栏是 X、内容是旧接口”。
-                setIface();
-                // 0.1.111：报错也是一个加载终态，顶栏源名也要刷一次。静态 load()
+                // 0.1.97：报错后把 tab 选中态刷回真实的 activeId。切换失败时
+                // guarded 回调已把 activeId 恢复成旧接口，但 tab 还停在新接口 X
+                // 上，不刷就会“tab 是 X、内容是旧接口”。
+                refreshIfaceTabs();
+                // 0.1.111：报错也是一个加载终态，片源条也要刷一次。静态 load()
                 // 的失败分支在调 error() 之前已把快照恢复（vod.home = oldHome），
-                // 此时 setTitle() 读到的是真实的旧首页源，不用等回退重载成功才纠正。
-                setTitle();
+                // 此时 setSourceBar() 读到的是真实的旧首页源，不用等回退重载成功才纠正。
+                setSourceBar();
             }
         };
     }
@@ -289,19 +307,8 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         if (mBinding.filter.getVisibility() == View.INVISIBLE) mBinding.filter.show();
     }
 
-    private void onSite(View view) {
-        SiteDialog.create().change().show(this);
-    }
-
     private void onFilter(View view) {
         if (isFocused() && mFocused.getFilters() != null && !mFocused.getFilters().isEmpty()) FilterDialog.create().filter(mFocused.getFilters()).show(this);
-    }
-
-    private boolean onMenuItemClick(MenuItem item) {
-        if (item.getItemId() == R.id.search) SearchActivity.start(requireActivity());
-        else if (item.getItemId() == R.id.keep) KeepActivity.start(requireActivity());
-        else if (item.getItemId() == R.id.history) HistoryActivity.start(requireActivity());
-        return true;
     }
 
     private void showProgress() {
@@ -340,8 +347,8 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     public void onRefreshEvent(RefreshEvent event) {
         switch (event.getType()) {
             case HOME:
-                setTitle();
-                setIface();
+                setSourceBar();
+                refreshIfaceTabs();
             case SIZE:
                 homeContent();
                 break;
@@ -377,7 +384,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 mAutoFirst = true;
                 showProgress();
                 hideContent();
-                setTitle();
+                setSourceBar();
             }
 
             @Override
@@ -385,10 +392,10 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 Notify.dismiss();
                 Notify.show(msg);
                 showContent();
-                // 0.1.97：同上，报错后把顶栏接口名刷回真实的 activeId。
-                setIface();
-                // 0.1.111：同 getCallback，报错后顶栏源名也刷一次（快照已恢复）。
-                setTitle();
+                // 0.1.97：同上，报错后把 tab 选中态刷回真实的 activeId。
+                refreshIfaceTabs();
+                // 0.1.111：同 getCallback，报错后片源条也刷一次（快照已恢复）。
+                setSourceBar();
             }
         });
     }
