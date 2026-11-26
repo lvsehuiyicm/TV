@@ -130,4 +130,5 @@ export function installDrpyGlobals() {
     if (typeof globalThis._pdfa !== 'function') globalThis._pdfa = _pdfa;
     if (typeof globalThis.setResult !== 'function') globalThis.setResult = setResult;
     if (typeof globalThis.log !== 'function') globalThis.log = log;
+    if (typeof globalThis.joinUrl !== 'function') globalThis.joinUrl = host.joinUrl;
 }
