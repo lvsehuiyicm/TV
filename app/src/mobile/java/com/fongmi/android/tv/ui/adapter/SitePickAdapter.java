@@ -57,6 +57,18 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
         longClickListener = listener;
     }
 
+    /** 0.1.127：点某一行就直接切（不用先选、再点确定）。 */
+    public interface OnItemClickListener {
+
+        void onItemClick(Site site);
+    }
+
+    private OnItemClickListener clickListener;
+
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        clickListener = listener;
+    }
+
     /** 管理后刷新列表：homeKey 与 pending 都回到当前首页源。 */
     public void refresh(List<Site> items, String homeKey) {
         all.clear();
@@ -122,8 +134,13 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
             holder.binding.check.setImageTintList(ColorStateList.valueOf(color));
         }
         holder.binding.getRoot().setOnClickListener(v -> {
-            pendingKey = item.getKey();
-            notifyDataSetChanged();
+            // 0.1.127：点了就直接切（对话框里已接上 listener）；没接上时退回老行为
+            // （只把这一行标成待选），免得点一下没反应。
+            if (clickListener != null) clickListener.onItemClick(item);
+            else {
+                pendingKey = item.getKey();
+                notifyDataSetChanged();
+            }
         });
         holder.binding.getRoot().setOnLongClickListener(v -> {
             if (longClickListener != null) longClickListener.onItemLongClick(item);

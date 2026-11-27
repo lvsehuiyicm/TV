@@ -58,12 +58,12 @@ public class SitePickDialog extends BaseAlertDialog implements SiteListener, Sit
     @Override
     protected void initEvent() {
         adapter.setOnItemLongClickListener(this);
-        binding.cancel.setOnClickListener(v -> dismiss());
-        binding.confirm.setOnClickListener(v -> {
-            Site pending = adapter.getPending();
-            if (pending != null && listener != null) listener.setSite(pending);
+        // 0.1.127：点某一行就直接切到那个源并关弹窗，不用再点确定。
+        adapter.setOnItemClickListener(site -> {
+            if (listener != null) listener.setSite(site);
             dismiss();
         });
+        binding.cancel.setOnClickListener(v -> dismiss());
     }
 
     @Override

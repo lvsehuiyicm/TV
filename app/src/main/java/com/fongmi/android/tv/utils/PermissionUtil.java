@@ -65,6 +65,31 @@ public class PermissionUtil {
         else mediator.permissions(storagePermission()).request(permissionCallback);
     }
 
+    /** 0.1.127：这台手机有没有“所有文件访问权限”。 */
+    public static boolean hasAllFilesPermission() {
+        return hasAllFiles();
+    }
+
+    /** 0.1.127：这台手机能不能打开“所有文件访问权限”设置页（Android 11+ 且系统有这个设置页）。 */
+    public static boolean canManageAllFiles(FragmentActivity activity) {
+        return canRequestAllFiles(activity);
+    }
+
+    /**
+     * 0.1.127：直接打开系统“所有文件访问权限”设置页（带本 app 包名），点允许就行。
+     * 带包名的页打不开时退到不带包名的总页；两个都打不开时什么都不做。
+     */
+    public static void openAllFilesSettings(FragmentActivity activity) {
+        Uri uri = Uri.parse("package:" + activity.getPackageName());
+        Intent app = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri);
+        if (resolves(activity, app)) {
+            activity.startActivity(app);
+            return;
+        }
+        Intent all = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+        if (resolves(activity, all)) activity.startActivity(all);
+    }
+
     private static boolean canRequestAllFiles(FragmentActivity activity) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false;
         Uri uri = Uri.parse("package:" + activity.getPackageName());

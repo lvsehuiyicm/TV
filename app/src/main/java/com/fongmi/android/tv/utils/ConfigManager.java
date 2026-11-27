@@ -46,6 +46,8 @@ public class ConfigManager {
 
     private static final String KEY_SUBS = "config_subs";
     private static final String KEY_ACTIVE = "config_active_iface";
+    /** 0.1.127：每个本地接口上次选的首页源 key（iface_last_home_<subId> → site key），持久化，重启还在。 */
+    private static final String KEY_LAST_HOME = "iface_last_home_";
 
     public static class Sub {
         public String id;
@@ -192,6 +194,25 @@ public class ConfigManager {
         return Prefers.getString(KEY_ACTIVE, "");
     }
 
+    /**
+     * 0.1.127：记下当前本地接口上次选的首页源（用户亲手选源时调）。只对文件夹 / 单文件
+     * 接口记，在线接口不记、不改在线接口的行为（在线接口切过去仍按 0.1.97 的 resetHome
+     * 逻辑走第一个源）。没有当前接口、或当前不是本地接口时什么都不做。
+     */
+    public static void recordLastHomeSite(String siteKey) {
+        Sub active = getActiveSub();
+        if (active == null || !(active.isFolder() || active.isFile())) return;
+        if (TextUtils.isEmpty(siteKey)) return;
+        Prefers.put(KEY_LAST_HOME + active.id, siteKey);
+    }
+
+    /** 0.1.127：取这个本地接口上次选的首页源 key，没有记录返回 null。 */
+    public static String getLastHomeSiteKey(String subId) {
+        if (TextUtils.isEmpty(subId)) return null;
+        String key = Prefers.getString(KEY_LAST_HOME + subId, "");
+        return TextUtils.isEmpty(key) ? null : key;
+    }
+
     public static void setActiveId(String id) {
         Prefers.put(KEY_ACTIVE, id == null ? "" : id);
     }
@@ -266,10 +287,22 @@ public class ConfigManager {
     private static void activateLocal(Sub sub, Callback callback) {
         VodConfig.get().cancel();
         List<Site> sites = localSites(sub);
-        Site home = sites.isEmpty() ? new Site() : sites.get(0);
+        // 0.1.127：首页用这个接口上次选的源（有记录、且那个源还在列表里才恢复），
+        // 没有记录才用第一个。以前这里永远取第一个，切过去就重置。
+        Site home = lastHomeSite(sub, sites);
         VodConfig.get().setLocalSites(sites, home);
         ConfigEvent.vod();
         callback.success();
+    }
+
+    /** 0.1.127：这个本地接口上次选的首页源（还在列表里才算）；没有记录或源已不在时回第一个。 */
+    private static Site lastHomeSite(Sub sub, List<Site> sites) {
+        if (sites.isEmpty()) return new Site();
+        String key = getLastHomeSiteKey(sub.id);
+        if (key != null) {
+            for (Site site : sites) if (key.equals(site.getKey())) return site;
+        }
+        return sites.get(0);
     }
 
     /** 0.1.126：文件夹/单文件接口自己的源（与 VodConfig.initSite 里本地脚本那段同款过滤/重命名/同步）。 */
@@ -450,6 +483,24 @@ public class ConfigManager {
     public static void reloadVod(Callback callback) {
         vodReloadPending = false;
         VodConfig.load(VodConfig.get().getConfig(), callback);
+    }
+
+    /**
+     * 0.1.127：开机按当前接口加载。以前开机永远 VodConfig.load(Config.vod())，
+     * Config.vod() 是按 time DESC 取的最近成功加载过的在线配置；切文件夹不刷新
+     * time，所以当前接口是文件夹时，开机仍先拉一次上一个在线配置的 JSON（超过
+     * 10 分钟没用 app，磁盘缓存过期，就要多花 7–15 秒拉一个用不上的配置）。
+     * 现在当前接口是文件夹 / 单文件时直接走轻量路径拼本地 sites，不调 VodConfig.load；
+     * 是在线接口、没有当前接口、或文件夹被关掉时，走原来的全量加载。
+     */
+    public static void loadVodOnBoot(Callback callback) {
+        Sub active = getActiveSub();
+        if (active != null && active.enabled && (active.isFolder() || active.isFile())) {
+            VodConfig.get().init();
+            activateLocal(active, callback);
+        } else {
+            VodConfig.get().init().load(callback);
+        }
     }
 
     // 0.1.126：拨开关攒下的待加载。开关只改标志不加载（瞬时），真正的加载推迟到

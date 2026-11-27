@@ -510,6 +510,11 @@ public class VodConfig extends BaseConfig {
 
     public void setHome(Site site) {
         setHome(getConfig(), site, true);
+        // 0.1.127：用户亲手选了首页源，记下来（只对本地接口记，见 ConfigManager）。
+        // 走这个公开入口的都是用户主动选源（首页切源弹窗、设置页、删源后改首页源），
+        // 加载内部走的是 setHome(Config, Site, boolean)，不经过这里，不会把加载时
+        // 恢复的默认源误记成“上次选的”。
+        ConfigManager.recordLastHomeSite(site == null ? null : site.getKey());
         RefreshEvent.home();
     }
 

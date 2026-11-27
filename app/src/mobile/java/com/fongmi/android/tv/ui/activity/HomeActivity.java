@@ -23,6 +23,7 @@ import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
+import com.fongmi.android.tv.api.loader.BaseLoader;
 import com.fongmi.android.tv.api.node.NodeRuntime;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.databinding.ActivityHomeBinding;
@@ -45,10 +46,14 @@ import com.fongmi.android.tv.ui.fragment.SettingFragment;
 import com.fongmi.android.tv.ui.fragment.SettingPlayerFragment;
 import com.fongmi.android.tv.ui.fragment.SettingPreloadFragment;
 import com.fongmi.android.tv.ui.fragment.VodFragment;
+import com.fongmi.android.tv.utils.ConfigManager;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
+import com.github.catvod.utils.Prefers;
+import com.github.catvod.utils.Task;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationBarView;
 
 import org.greenrobot.eventbus.Subscribe;
@@ -57,6 +62,9 @@ import org.greenrobot.eventbus.ThreadMode;
 public class HomeActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener {
 
     private static final String STATE_ACTION_HANDLED = "action_handled";
+
+    /** 0.1.127：第一次安装的“所有文件访问权限”提示弹过没有（只弹一次）。 */
+    private static final String KEY_FILE_PERM_PROMPT = "file_perm_prompt_shown";
 
     private static volatile int instanceCount;
 
@@ -158,11 +166,34 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
 
     private void onNetworkPermissionResult(boolean allGranted) {
         PermissionUtil.requestNotify(this);
+        maybeShowFilePermissionPrompt();
         initConfig();
     }
 
+    /**
+     * 0.1.127：第一次打开 app 时弹一次，说明本地包 / 本地源要“所有文件访问权限”
+     * 才能读到文件；点“去设置”直接跳到系统权限页，点允许就行。只弹一次（flag 记着），
+     * 已有权限、或这台手机打不开那个设置页时不弹。提示不挡配置加载（initConfig 照常走）。
+     */
+    private void maybeShowFilePermissionPrompt() {
+        if (Prefers.getBoolean(KEY_FILE_PERM_PROMPT, false)) return;
+        if (!PermissionUtil.canManageAllFiles(this) || PermissionUtil.hasAllFilesPermission()) return;
+        Prefers.put(KEY_FILE_PERM_PROMPT, true);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.file_perm_title)
+                .setMessage(R.string.file_perm_message)
+                .setNegativeButton(R.string.dialog_negative, null)
+                .setPositiveButton(R.string.file_perm_settings, (dialog, which) -> PermissionUtil.openAllFilesSettings(this))
+                .show();
+    }
+
     private void initConfig() {
-        VodConfig.get().init().load(getCallback());
+        // 0.1.127：Python 预热与配置加载并行——后台线程先把 Python 解释器起起来
+        // （BaseLoader.warmupPython），盖掉冷启动里 Python 启动那 ~15 秒里解释器
+        // 启动的部分；预热失败静默，第一次建爬虫时再启动，不影响正常流程。
+        Task.execute(() -> BaseLoader.get().warmupPython());
+        // 0.1.127：开机按当前接口加载（文件夹接口走轻量路，不拉上一个在线配置）。
+        ConfigManager.loadVodOnBoot(getCallback());
         LiveConfig.get().init().load();
         WallConfig.get().init();
     }

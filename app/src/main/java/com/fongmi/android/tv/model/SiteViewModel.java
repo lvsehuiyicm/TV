@@ -13,6 +13,7 @@ import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.exception.SpiderLoadException;
 import com.fongmi.android.tv.utils.ConfigManager;
+import com.fongmi.android.tv.utils.HomeResultCache;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.github.catvod.utils.Task;
@@ -34,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,7 +49,9 @@ public class SiteViewModel extends ViewModel {
     private final ViewModelSearchRunner searches;
 
     /** 首页内存缓存：key = 接口身份（activeId）+ 首页源 key。只放内存，退出即丢；只用来先显示，后台一定再拉一次（见 homeContent）。 */
-    private final Map<String, Result> homeCache = new HashMap<>();
+    // 0.1.127：换成 ConcurrentHashMap——内存缓存现在会被多个后台线程同时读写
+    // （拉新任务、磁盘读任务），HashMap 在这里不安全。
+    private final Map<String, Result> homeCache = new ConcurrentHashMap<>();
 
     // 0.1.110 B(a)：首页请求的世代号。每次发起新的首页请求或切到分类/详情/搜索
     // （execute）时 +1；只有与当前世代号一致、且取回的仍是当前首页源的请求，
@@ -93,9 +97,28 @@ public class SiteViewModel extends ViewModel {
         // 这里直接用 Task.submit 起请求，各站的请求互不取消、先出哪个算哪个；
         // 世代号 + 当前首页源双重校验，只让“最新、且仍是当前站”的那次推界面。
         int epoch = homeEpoch.incrementAndGet();
+        // 0.1.127：内存没命中时读磁盘缓存（上次的首页）。磁盘读放后台线程，不卡主线程；
+        // 读到先显示，后台拉新的到了再替换。只当内存里还没有新结果时才贴（putIfAbsent
+        // 原子判断：拉新先到了就不贴旧的，免得新结果被旧的盖回去）。
+        if (cached == null) {
+            FluentFuture<Result> diskFuture = FluentFuture.from(Task.submit(() -> HomeResultCache.get(key), 5000));
+            synchronized (homeFutures) {
+                homeFutures.add(diskFuture);
+            }
+            diskFuture.addCallback(Task.callback(disk -> {
+                removeHomeFuture(diskFuture);
+                if (disk == null) return;
+                if (epoch != homeEpoch.get() || !isCurrentHome(home)) return;
+                if (homeCache.putIfAbsent(key, disk) == null) result.postValue(disk);
+            }, error -> removeHomeFuture(diskFuture)), MoreExecutors.directExecutor());
+        }
         FluentFuture<Result> future = FluentFuture.from(Task.submit(() -> {
             Result fresh = SiteApi.homeContent(home);
-            if (fresh != null) homeCache.put(key, fresh);
+            if (fresh != null) {
+                homeCache.put(key, fresh);
+                // 0.1.127：拉新的成功也写一份到磁盘，下次冷启动先显示它。
+                HomeResultCache.put(key, fresh);
+            }
             return fresh;
         }, Constant.TIMEOUT_VOD));
         synchronized (homeFutures) {

@@ -72,6 +72,21 @@ public class BaseLoader {
         return jsLoader;
     }
 
+    /**
+     * 0.1.127：Python 预热——在后台线程提前创建 PyLoader，触发 Python.start()
+     * + app 模块导入，和配置加载并行；首页第一次建爬虫时 Python 已经是热的。
+     * 创建的就是后面真正用的那个 PyLoader 实例（getPyLoader 懒加载、只建一次，
+     * 0.1.126 起切换也不换实例），不是一次性的。预热失败静默（解释器没起来时
+     * 第一次建爬虫会再启动一次），不影响正常流程。只能在后台线程调（真正的建
+     * 爬虫本来就发生在后台线程，构造 PyLoader 走的是同一条路）。
+     */
+    public void warmupPython() {
+        try {
+            getPyLoader();
+        } catch (Throwable ignored) {
+        }
+    }
+
     private synchronized PyLoader getPyLoader() {
         if (pyLoader == null) pyLoader = new PyLoader();
         return pyLoader;

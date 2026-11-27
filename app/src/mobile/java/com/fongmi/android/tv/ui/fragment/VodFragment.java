@@ -33,6 +33,7 @@ import com.fongmi.android.tv.impl.FilterListener;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.model.SiteViewModel;
 import com.fongmi.android.tv.ui.activity.ConfigActivity;
+import com.fongmi.android.tv.ui.activity.HistoryActivity;
 import com.fongmi.android.tv.ui.activity.SearchActivity;
 import com.fongmi.android.tv.ui.activity.VideoActivity;
 import com.fongmi.android.tv.ui.activity.WebActivity;
@@ -111,6 +112,8 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     @Override
     protected void initEvent() {
         mBinding.searchBtn.setOnClickListener(v -> SearchActivity.start(requireActivity()));
+        // 0.1.127：历史图标（搜索与齿轮之间），点开现有的历史列表。
+        mBinding.historyBtn.setOnClickListener(v -> HistoryActivity.start(requireActivity()));
         mBinding.settingsBtn.setOnClickListener(v -> ConfigActivity.start(requireActivity()));
         mBinding.sourceBar.setOnClickListener(v -> SitePickDialog.create().show(this));
 

@@ -61,22 +61,6 @@
             android:textColor="?attr/colorOnSurface"
             android:textSize="14sp" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/confirm"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/shape_btn_amber"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:text="@string/dialog_positive"
-            android:textColor="@color/black"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
     </androidx.appcompat.widget.LinearLayoutCompat>
 
 </androidx.appcompat.widget.LinearLayoutCompat>
