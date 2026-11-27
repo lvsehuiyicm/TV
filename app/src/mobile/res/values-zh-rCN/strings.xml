@@ -246,4 +246,5 @@
     <string name="data_backup_now">立即备份</string>
     <string name="data_restore_now">恢复备份</string>
     <string name="data_disclaimer">本应用仅供学习交流使用，不提供任何影视内容的存储与分发。所有内容版权归原权利人所有，请勿用于商业用途。使用本应用产生的任何风险与后果由用户自行承担。</string>
+    <string name="data_disclaimer_title">声明</string>
 </resources>

@@ -9,10 +9,12 @@
     android:orientation="vertical"
     android:padding="4dp">
 
+    <!-- 0.1.125：ShapeableImageView 的描边以形状边缘为中心画，一半会超出 44dp；FrameLayout 原来正好 44dp，会把描边外半圈裁掉，四边裁平后圆环看起来不是圆形。留 2dp 内边距（大于选中态 3dp 描边的一半 1.5dp），圆环完整显示。颜色圆仍是 44dp。 -->
     <FrameLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center">
+        android:layout_gravity="center"
+        android:padding="2dp">
 
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/image"

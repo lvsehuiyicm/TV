@@ -77,7 +77,7 @@
             android:clipToPadding="false"
             android:paddingStart="8dp"
             android:paddingTop="2dp"
-            android:paddingEnd="8dp" />
+            android:paddingEnd="0dp" />
 
         <LinearLayout
             android:id="@+id/sourceBar"

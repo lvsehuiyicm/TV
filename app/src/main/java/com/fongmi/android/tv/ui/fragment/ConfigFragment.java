@@ -227,6 +227,8 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
 
     /** 在线组 = KIND_URL；本地组 = KIND_JSON + KIND_FOLDER + KIND_FILE（保持订阅原顺序拼在一起）；直播组 = 两类直播。 */
     private void refresh() {
+        // 0.1.125：异步配置加载回调可能在页面已离开后才回来，未 attached 时 getString 会闪退。
+        if (!isAdded()) return;
         List<ConfigManager.Sub> vod = ConfigManager.getSubs(ConfigManager.TAB_VOD);
         List<ConfigManager.Sub> live = ConfigManager.getSubs(ConfigManager.TAB_LIVE);
         List<ConfigManager.Sub> online = filter(vod, ConfigManager.KIND_URL);
@@ -250,6 +252,8 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
 
     /** 总数卡：接口总数 + 健康点统计（只计测过成绩的，没测过的不算）。 */
     private void refreshTotal() {
+        // 0.1.125：同 refresh()，异步回调回来时页面可能已不在，getString 会闪退。
+        if (!isAdded()) return;
         List<ConfigManager.Sub> vod = ConfigManager.getSubs(ConfigManager.TAB_VOD);
         List<ConfigManager.Sub> live = ConfigManager.getSubs(ConfigManager.TAB_LIVE);
         int green = 0;
