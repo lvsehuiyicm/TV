@@ -19,6 +19,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
@@ -40,10 +41,19 @@ import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.ScriptManager;
 import com.fongmi.android.tv.utils.SourceChecker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -83,12 +93,9 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
     }));
 
     private ActivityConfigBinding mBinding;
-    private ConfigSubAdapter mAdapterLocal;
-    private ConfigSubAdapter mAdapterFolder;
-    private ConfigSubAdapter mAdapterSingle;
     private ConfigSubAdapter mAdapterOnline;
-    private ConfigSubAdapter mAdapterLiveLocal;
-    private ConfigSubAdapter mAdapterLiveOnline;
+    private ConfigSubAdapter mAdapterLocal;
+    private ConfigSubAdapter mAdapterLive;
     private int tab = ConfigManager.TAB_VOD;
     private int pickMode = PICK_SINGLE;
     private boolean embedded;
@@ -115,84 +122,282 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
     protected void initView() {
         if (embedded) mBinding.toolbar.setVisibility(View.GONE);
         else mBinding.toolbar.setNavigationOnClickListener(v -> requireActivity().finish());
-        mAdapterLocal = new ConfigSubAdapter(this);
-        mAdapterFolder = new ConfigSubAdapter(this);
-        mAdapterSingle = new ConfigSubAdapter(this);
+        mBinding.checkAll.setSelected(true);
         mAdapterOnline = new ConfigSubAdapter(this);
-        mAdapterLiveLocal = new ConfigSubAdapter(this);
-        mAdapterLiveOnline = new ConfigSubAdapter(this);
-        bindSection(mBinding.recyclerLocal, mAdapterLocal);
-        bindSection(mBinding.recyclerFolder, mAdapterFolder);
-        bindSection(mBinding.recyclerSingle, mAdapterSingle);
+        mAdapterLocal = new ConfigSubAdapter(this);
+        mAdapterLive = new ConfigSubAdapter(this);
         bindSection(mBinding.recyclerOnline, mAdapterOnline);
-        bindSection(mBinding.recyclerLiveLocal, mAdapterLiveLocal);
-        bindSection(mBinding.recyclerLiveOnline, mAdapterLiveOnline);
+        bindSection(mBinding.recyclerLocal, mAdapterLocal);
+        bindSection(mBinding.recyclerLive, mAdapterLive);
         refresh();
     }
 
+    /** 一组一个 RecyclerView；长按把手拖动换顺序（0.1.118 首页 tab 同款，松手才存一次）。 */
     private void bindSection(RecyclerView recycler, ConfigSubAdapter adapter) {
         recycler.setAdapter(adapter);
         recycler.setItemAnimator(null);
+        ItemTouchHelper helper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            @Override
+            public boolean isLongPressDragEnabled() {
+                return false;
+            }
+
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                adapter.onMove(viewHolder.getAdapterPosition(), target.getAdapterPosition());
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                saveOrder();
+            }
+        });
+        helper.attachToRecyclerView(recycler);
+        adapter.setItemTouchHelper(helper);
     }
 
     @Override
     protected void initEvent() {
         mBinding.checkAll.setOnClickListener(v -> startCheckAll());
-        mBinding.importLocal.setOnClickListener(v -> {
-            setTab(ConfigManager.TAB_VOD);
-            pickMode = PICK_LOCAL;
-            FileChooser.from(fileLauncher).show();
-        });
-        mBinding.importFolder.setOnClickListener(v -> {
-            setTab(ConfigManager.TAB_VOD);
-            folderLauncher.launch(new Intent(requireActivity(), FileActivity.class).putExtra(FileActivity.EXTRA_PICK_DIR, true));
-        });
-        mBinding.importSingle.setOnClickListener(v -> {
-            setTab(ConfigManager.TAB_VOD);
-            pickMode = PICK_SINGLE;
-            FileChooser.from(fileLauncher).show();
-        });
-        mBinding.importOnline.setOnClickListener(v -> {
+        mBinding.addOnline.setOnClickListener(v -> {
             setTab(ConfigManager.TAB_VOD);
             onAdd();
         });
-        mBinding.importLiveLocal.setOnClickListener(v -> {
-            setTab(ConfigManager.TAB_LIVE);
-            pickMode = PICK_LOCAL;
-            FileChooser.from(fileLauncher).show();
-        });
-        mBinding.importLiveOnline.setOnClickListener(v -> {
-            setTab(ConfigManager.TAB_LIVE);
-            onAdd();
-        });
+        mBinding.addLocal.setOnClickListener(v -> showLocalAddDialog());
+        mBinding.addLive.setOnClickListener(v -> showLiveAddDialog());
     }
 
-    /** 只记下当前类型（onAdd / onFilePicked 靠它定 kind）；列表不再按类型切页，6 组一直都在。 */
+    /** 本地接口组一种“添加”对应三种导入方式，点开选一种（沿用原来的三个导入入口）。 */
+    private void showLocalAddDialog() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setItems(new CharSequence[]{getString(R.string.config_import_local_interface), getString(R.string.config_import_folder), getString(R.string.config_import_single)}, (dialog, which) -> {
+                    if (which == 0) importLocalFile();
+                    else if (which == 1) importFolder();
+                    else importSingle();
+                })
+                .show();
+    }
+
+    /** 直播组一种“添加”对应两种导入方式，点开选一种（沿用原来的两个导入入口）。 */
+    private void showLiveAddDialog() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setItems(new CharSequence[]{getString(R.string.config_import_live_local), getString(R.string.config_import_live_online)}, (dialog, which) -> {
+                    if (which == 0) importLiveLocal();
+                    else {
+                        setTab(ConfigManager.TAB_LIVE);
+                        onAdd();
+                    }
+                })
+                .show();
+    }
+
+    private void importLocalFile() {
+        setTab(ConfigManager.TAB_VOD);
+        pickMode = PICK_LOCAL;
+        FileChooser.from(fileLauncher).show();
+    }
+
+    private void importFolder() {
+        setTab(ConfigManager.TAB_VOD);
+        folderLauncher.launch(new Intent(requireActivity(), FileActivity.class).putExtra(FileActivity.EXTRA_PICK_DIR, true));
+    }
+
+    private void importSingle() {
+        setTab(ConfigManager.TAB_VOD);
+        pickMode = PICK_SINGLE;
+        FileChooser.from(fileLauncher).show();
+    }
+
+    private void importLiveLocal() {
+        setTab(ConfigManager.TAB_LIVE);
+        pickMode = PICK_LOCAL;
+        FileChooser.from(fileLauncher).show();
+    }
+
+    /** 只记下当前类型（onAdd / onFilePicked 靠它定 kind）；列表不再按类型切页，3 组一直都在。 */
     private void setTab(int tab) {
         this.tab = tab;
     }
 
-    /** 导入的源按导入方式分组，分别列在各自的导入行下边；没源的组只留标题。 */
+    /** 在线组 = KIND_URL；本地组 = KIND_JSON + KIND_FOLDER + KIND_FILE（保持订阅原顺序拼在一起）；直播组 = 两类直播。 */
     private void refresh() {
         List<ConfigManager.Sub> vod = ConfigManager.getSubs(ConfigManager.TAB_VOD);
         List<ConfigManager.Sub> live = ConfigManager.getSubs(ConfigManager.TAB_LIVE);
-        refreshSection(mBinding.recyclerLocal, mAdapterLocal, filter(vod, ConfigManager.KIND_JSON));
-        refreshSection(mBinding.recyclerFolder, mAdapterFolder, filter(vod, ConfigManager.KIND_FOLDER));
-        refreshSection(mBinding.recyclerSingle, mAdapterSingle, filter(vod, ConfigManager.KIND_FILE));
-        refreshSection(mBinding.recyclerOnline, mAdapterOnline, filter(vod, ConfigManager.KIND_URL));
-        refreshSection(mBinding.recyclerLiveLocal, mAdapterLiveLocal, filter(live, ConfigManager.KIND_LIVE_FILE));
-        refreshSection(mBinding.recyclerLiveOnline, mAdapterLiveOnline, filter(live, ConfigManager.KIND_LIVE_URL));
+        List<ConfigManager.Sub> online = filter(vod, ConfigManager.KIND_URL);
+        List<ConfigManager.Sub> local = new ArrayList<>();
+        for (ConfigManager.Sub sub : vod) if (sub.isJson() || sub.isFolder() || sub.isFile()) local.add(sub);
+        Map<String, ConfigSubAdapter.Count> counts = localCounts(vod, live);
+        refreshSection(mBinding.recyclerOnline, mAdapterOnline, online, counts);
+        refreshSection(mBinding.recyclerLocal, mAdapterLocal, local, counts);
+        refreshSection(mBinding.recyclerLive, mAdapterLive, live, counts);
+        mBinding.groupOnlineCount.setText(String.valueOf(online.size()));
+        mBinding.groupLocalCount.setText(String.valueOf(local.size()));
+        mBinding.groupLiveCount.setText(String.valueOf(live.size()));
+        refreshTotal();
     }
 
-    private void refreshSection(RecyclerView recycler, ConfigSubAdapter adapter, List<ConfigManager.Sub> subs) {
+    private void refreshSection(RecyclerView recycler, ConfigSubAdapter adapter, List<ConfigManager.Sub> subs, Map<String, ConfigSubAdapter.Count> counts) {
         adapter.refresh(subs);
+        adapter.setCounts(counts);
         recycler.setVisibility(subs.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+
+    /** 总数卡：接口总数 + 健康点统计（只计测过成绩的，没测过的不算）。 */
+    private void refreshTotal() {
+        List<ConfigManager.Sub> vod = ConfigManager.getSubs(ConfigManager.TAB_VOD);
+        List<ConfigManager.Sub> live = ConfigManager.getSubs(ConfigManager.TAB_LIVE);
+        int green = 0;
+        int yellow = 0;
+        int red = 0;
+        for (ConfigManager.Sub sub : vod) {
+            int grade = gradeOf(sub);
+            if (grade == SourceChecker.GRADE_GREEN) green++;
+            else if (grade == SourceChecker.GRADE_YELLOW) yellow++;
+            else if (grade == SourceChecker.GRADE_RED) red++;
+        }
+        for (ConfigManager.Sub sub : live) {
+            int grade = gradeOf(sub);
+            if (grade == SourceChecker.GRADE_GREEN) green++;
+            else if (grade == SourceChecker.GRADE_YELLOW) yellow++;
+            else if (grade == SourceChecker.GRADE_RED) red++;
+        }
+        mBinding.totalText.setText(getString(R.string.config_total, vod.size() + live.size()));
+        mBinding.totalGreen.setText(String.valueOf(green));
+        mBinding.totalYellow.setText(String.valueOf(yellow));
+        mBinding.totalRed.setText(String.valueOf(red));
+    }
+
+    private int gradeOf(ConfigManager.Sub sub) {
+        if (sub.isJson() || sub.isFolder() || sub.isFile()) return mAdapterLocal.getGrade(sub.id);
+        if (sub.isUrl()) return mAdapterOnline.getGrade(sub.id);
+        return mAdapterLive.getGrade(sub.id);
     }
 
     private List<ConfigManager.Sub> filter(List<ConfigManager.Sub> subs, String kind) {
         List<ConfigManager.Sub> result = new ArrayList<>();
         for (ConfigManager.Sub sub : subs) if (kind.equals(sub.kind)) result.add(sub);
         return result;
+    }
+
+    /**
+     * 拖完的顺序存盘：只重排各组内部的相对顺序，各组在订阅总表里的槽位不动——
+     * 这样首页接口 tab 的顺序不会因为配置页的一次拖动被打乱重组。
+     */
+    private void saveOrder() {
+        List<ConfigManager.Sub> all = ConfigManager.getAll();
+        List<ConfigManager.Sub> local = mAdapterLocal.getItems();
+        List<ConfigManager.Sub> online = mAdapterOnline.getItems();
+        List<ConfigManager.Sub> live = mAdapterLive.getItems();
+        int localIndex = 0;
+        int onlineIndex = 0;
+        int liveIndex = 0;
+        List<ConfigManager.Sub> result = new ArrayList<>();
+        for (ConfigManager.Sub sub : all) {
+            if (sub.tab == ConfigManager.TAB_VOD) {
+                if (sub.isUrl()) result.add(pick(online, onlineIndex++, sub));
+                else result.add(pick(local, localIndex++, sub));
+            } else {
+                result.add(pick(live, liveIndex++, sub));
+            }
+        }
+        ConfigManager.saveAllOrder(result);
+    }
+
+    private ConfigManager.Sub pick(List<ConfigManager.Sub> items, int index, ConfigManager.Sub fallback) {
+        return index < items.size() ? items.get(index) : fallback;
+    }
+
+    /** 本地能算的源数（免联网）：本地包数 sites、文件夹数 .py/.js、直播文件数频道；在线的数只能等检测。 */
+    private Map<String, ConfigSubAdapter.Count> localCounts(List<ConfigManager.Sub> vod, List<ConfigManager.Sub> live) {
+        Map<String, ConfigSubAdapter.Count> result = new HashMap<>();
+        for (ConfigManager.Sub sub : vod) {
+            if (sub.isJson()) {
+                int count = countJsonSites(sub.link);
+                if (count >= 0) result.put(sub.id, new ConfigSubAdapter.Count(count, SourceChecker.COUNT_SITES));
+            } else if (sub.isFolder()) {
+                File dir = new File(sub.link);
+                if (dir.isDirectory()) result.put(sub.id, new ConfigSubAdapter.Count(countSources(dir), SourceChecker.COUNT_SOURCES));
+            }
+        }
+        for (ConfigManager.Sub sub : live) {
+            if (sub.isLiveFile()) {
+                int count = countLiveChannels(sub.link);
+                if (count >= 0) result.put(sub.id, new ConfigSubAdapter.Count(count, SourceChecker.COUNT_CHANNELS));
+            }
+        }
+        return result;
+    }
+
+    private int countJsonSites(String path) {
+        try {
+            File file = new File(path);
+            if (!file.isFile()) return -1;
+            String text = readTextCapped(file);
+            if (text == null) return -1;
+            JsonElement parsed = JsonParser.parseString(text);
+            if (!parsed.isJsonObject()) return -1;
+            JsonElement sites = parsed.getAsJsonObject().get("sites");
+            if (sites == null || !sites.isJsonArray()) return -1;
+            return sites.getAsJsonArray().size();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private int countLiveChannels(String path) {
+        try {
+            File file = new File(path);
+            if (!file.isFile()) return -1;
+            String text = readTextCapped(file);
+            if (text == null) return -1;
+            String content = text.startsWith("\uFEFF") ? text.substring(1) : text;
+            JsonElement parsed = null;
+            try {
+                parsed = JsonParser.parseString(content);
+            } catch (Exception ignored) {
+            }
+            if (parsed != null && parsed.isJsonArray()) return parsed.getAsJsonArray().size();
+            if (parsed != null && parsed.isJsonObject()) return -1;
+            return countChannelLines(content);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /** 和 SourceChecker.countChannels 同一套数法（它是 private 的，这里抄一份：m3u 数 #EXTINF，txt 数带逗号和 :// 的行）。 */
+    private int countChannelLines(String text) {
+        int count = 0;
+        boolean m3u = text.contains("#EXTM3U");
+        for (String raw : text.split("\n")) {
+            String line = raw.trim();
+            if (line.isEmpty() || line.startsWith("#genre#")) continue;
+            if (m3u) {
+                if (line.startsWith("#EXTINF")) count++;
+            } else if (!line.startsWith("#")) {
+                int comma = line.indexOf(',');
+                if (comma > 0 && line.substring(comma + 1).contains("://")) count++;
+            }
+        }
+        return count;
+    }
+
+    /** 读本地文件全文；超过 4MB 的不读（配单没那么大，读了也解析不动）。 */
+    private String readTextCapped(File file) {
+        if (file.length() > 4L * 1024 * 1024) return null;
+        try (InputStream in = new FileInputStream(file); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int n;
+            while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+            return new String(out.toByteArray(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     @Override
@@ -211,7 +416,7 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
         List<ConfigManager.Sub> all = new ArrayList<>();
         all.addAll(ConfigManager.getSubs(ConfigManager.TAB_VOD));
         all.addAll(ConfigManager.getSubs(ConfigManager.TAB_LIVE));
-        for (ConfigSubAdapter adapter : new ConfigSubAdapter[]{mAdapterLocal, mAdapterFolder, mAdapterSingle, mAdapterOnline, mAdapterLiveLocal, mAdapterLiveOnline}) adapter.clearStatus();
+        for (ConfigSubAdapter adapter : new ConfigSubAdapter[]{mAdapterOnline, mAdapterLocal, mAdapterLive}) adapter.clearStatus();
         mBinding.checkAll.setText(getString(R.string.config_checking, 0, all.size()));
         mBinding.checkAll.setEnabled(false);
         showProgressDialog();
@@ -258,6 +463,7 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
                 App.post(() -> {
                     if (getView() == null) return;
                     setStatus(sub, result);
+                    refreshTotal();
                     mBinding.checkAll.setText(getString(R.string.config_checking, done, all.size()));
                 });
             }
@@ -269,7 +475,8 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
                 dismissProgressDialog();
                 checking = false;
                 mBinding.checkAll.setEnabled(true);
-                mBinding.checkAll.setText(R.string.config_check_all);
+                mBinding.checkAll.setText(R.string.config_check_all_btn);
+                refreshTotal();
                 if (!checkCancelled) Notify.show(getString(R.string.config_check_done, green, yellow, red));
             });
         });
@@ -312,12 +519,9 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
 
     private void setStatus(ConfigManager.Sub sub, SourceChecker.Result result) {
         String text = statusText(result);
-        if (sub.isJson()) mAdapterLocal.setStatus(sub.id, text, result.grade);
-        else if (sub.isFolder()) mAdapterFolder.setStatus(sub.id, text, result.grade);
-        else if (sub.isFile()) mAdapterSingle.setStatus(sub.id, text, result.grade);
-        else if (sub.isUrl()) mAdapterOnline.setStatus(sub.id, text, result.grade);
-        else if (sub.isLiveFile()) mAdapterLiveLocal.setStatus(sub.id, text, result.grade);
-        else if (sub.isLiveUrl()) mAdapterLiveOnline.setStatus(sub.id, text, result.grade);
+        if (sub.isJson() || sub.isFolder() || sub.isFile()) mAdapterLocal.setStatus(sub.id, text, result.grade, result.count, result.countKind);
+        else if (sub.isUrl()) mAdapterOnline.setStatus(sub.id, text, result.grade, result.count, result.countKind);
+        else if (sub.isLiveFile() || sub.isLiveUrl()) mAdapterLive.setStatus(sub.id, text, result.grade, result.count, result.countKind);
     }
 
     private String statusText(SourceChecker.Result result) {
@@ -513,20 +717,17 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
         refresh();
     }
 
+    /** 点一行切换接口（原来是拨开关，现在按设计图改成点行）：已经是当前用的就什么都不做。 */
     @Override
-    public void onToggle(ConfigManager.Sub item, boolean enabled) {
+    public void onRowClick(ConfigManager.Sub item) {
         if (item.tab == ConfigManager.TAB_VOD) {
-            if (!enabled && item.enabled && !item.id.equals(ConfigManager.getActiveId())) {
-                // 点的是已开但不是当前用的：切成当前用的，不关掉。
-                ConfigManager.activateVod(item, getCallback());
-                refresh();
-                return;
-            }
-            if (enabled) ConfigManager.activateVod(item, getCallback());
-            else ConfigManager.deactivateVod(item, getCallback());
+            if (item.id.equals(ConfigManager.getActiveId())) return;
+            ConfigManager.activateVod(item, getCallback());
+            refresh();
         } else {
-            if (enabled) ConfigManager.activateLive(item, getCallback());
-            else ConfigManager.deactivateLive(item, getCallback());
+            if (item.enabled && item.getConfigUrl().equals(LiveConfig.getUrl())) return;
+            ConfigManager.activateLive(item, getCallback());
+            refresh();
         }
     }
 

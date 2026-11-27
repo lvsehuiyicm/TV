@@ -173,6 +173,19 @@
     <string name="site_source">Source: %1$s</string>
     <string name="site_interface">Interface: %1$s</string>
     <string name="config_manage_iface">Manage interfaces</string>
+    <string name="config_title">Interface Config</string>
+    <string name="config_check_all_btn">Check all</string>
+    <string name="config_total">Total %1$d interfaces</string>
+    <string name="config_group_online">Online interfaces</string>
+    <string name="config_group_local">Local interfaces</string>
+    <string name="config_group_live">Live</string>
+    <string name="config_add">+ Add</string>
+    <string name="config_hint">Long-press to drag and reorder · Tap a row to switch interfaces</string>
+    <string name="config_channel_count">%1$d channels</string>
+    <string name="config_sub_json">JSON</string>
+    <string name="config_sub_live_online">Online</string>
+    <string name="config_sub_live_local">Local</string>
+    <string name="config_drag_handle">Drag to reorder</string>
     <string name="live_next">Next</string>
     <string name="config_kind_folder">Folder</string>
     <string name="config_kind_file">Single source</string>
@@ -221,7 +234,6 @@
     <string name="player_group_display">Display</string>
     <string name="player_group_network">Network</string>
     <string name="player_group_advanced">Advanced</string>
-    <string name="theme_preview">Preview</string>
     <string name="theme_alpha_hint">Let the page show a hint of the wallpaper color, keeping cards and text clear</string>
     <string name="data_storage">Storage</string>
     <string name="data_about">About</string>

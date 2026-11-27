@@ -19,8 +19,8 @@ android {
         applicationId "com.zhulong.tv"
         minSdk libs.versions.minSdk.get().toInteger()
         targetSdk libs.versions.targetSdk.get().toInteger()
-        versionCode 10221
-        versionName "0.1.121"
+        versionCode 10222
+        versionName "0.1.122"
         manifestPlaceholders.runtimeCatalog = providers.gradleProperty('tvRuntimeCatalog').getOrElse('https://cdn.jsdelivr.net/gh/lvsehuiyicm/TV@456ae8c6fbc78a7e31448595f91f3e6d58cdc01d/runtime/catalog.json')
         javaCompileOptions {
             annotationProcessorOptions {

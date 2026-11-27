@@ -100,7 +100,6 @@ public class ThemeFragment extends BaseFragment {
         });
         updateMode();
         updateBg();
-        refreshPreview();
     }
 
     private void setThemeMode(int mode) {
@@ -121,7 +120,6 @@ public class ThemeFragment extends BaseFragment {
         Setting.putWallType(0);
         ConfigEvent.wall();
         updateBg();
-        refreshPreview();
         refreshParentMine();
     }
 
@@ -140,12 +138,6 @@ public class ThemeFragment extends BaseFragment {
             item.check.setVisibility(selected ? View.VISIBLE : View.GONE);
             item.name.setTextColor(selected ? AMBER : defaultNameColor);
         }
-    }
-
-    /** 效果预览：用选中壁纸画一个缩小版首页。 */
-    private void refreshPreview() {
-        mBinding.previewBg.setImageResource(BGS[Setting.getWall()]);
-        mBinding.previewChipMovie.setSelected(true);
     }
 
     private float dp(int dp) {

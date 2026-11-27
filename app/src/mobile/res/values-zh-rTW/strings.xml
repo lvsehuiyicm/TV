@@ -112,6 +112,19 @@
     <string name="site_source">片源：%1$s</string>
     <string name="site_interface">接口：%1$s</string>
     <string name="config_manage_iface">管理接口</string>
+    <string name="config_title">介面設定</string>
+    <string name="config_check_all_btn">檢測全部</string>
+    <string name="config_total">共 %1$d 個介面</string>
+    <string name="config_group_online">線上接口</string>
+    <string name="config_group_local">本地接口</string>
+    <string name="config_group_live">直播</string>
+    <string name="config_add">+ 新增</string>
+    <string name="config_hint">長按拖曳可調整順序 · 點一行切換介面</string>
+    <string name="config_channel_count">%1$d 個台</string>
+    <string name="config_sub_json">JSON</string>
+    <string name="config_sub_live_online">線上</string>
+    <string name="config_sub_live_local">本地</string>
+    <string name="config_drag_handle">拖曳排序</string>
     <string name="live_next">接下來</string>
     <string name="config_kind_folder">文件夾</string>
     <string name="config_kind_file">單源</string>
@@ -154,7 +167,6 @@
     <string name="player_group_display">畫面</string>
     <string name="player_group_network">網絡</string>
     <string name="player_group_advanced">高級</string>
-    <string name="theme_preview">效果預覽</string>
     <string name="theme_alpha_hint">讓頁面底色帶一點壁紙顏色，卡片與文字保持清晰</string>
     <string name="data_storage">存儲空間</string>
     <string name="data_about">關於</string>

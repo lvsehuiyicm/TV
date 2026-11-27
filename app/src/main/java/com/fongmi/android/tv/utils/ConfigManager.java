@@ -177,6 +177,11 @@ public class ConfigManager {
         save(result);
     }
 
+    /** 拖拽排序后按给定顺序保存全部订阅（顺序本身就是数据，不另建模型）。 */
+    public static void saveAllOrder(List<Sub> subs) {
+        save(subs);
+    }
+
     public static String getActiveId() {
         return Prefers.getString(KEY_ACTIVE, "");
     }
