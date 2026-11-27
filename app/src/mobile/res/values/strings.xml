@@ -174,7 +174,7 @@
     <string name="site_interface">Interface: %1$s</string>
     <string name="config_manage_iface">Manage interfaces</string>
     <string name="config_title">Interface Config</string>
-    <string name="config_check_all_btn">Check all</string>
+    <string name="config_check_all_btn">Check all sources</string>
     <string name="config_total">Total %1$d interfaces</string>
     <string name="config_group_online">Online interfaces</string>
     <string name="config_group_local">Local interfaces</string>

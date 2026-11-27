@@ -174,7 +174,7 @@
     <string name="site_interface">接口：%1$s</string>
     <string name="config_manage_iface">管理接口</string>
     <string name="config_title">接口配置</string>
-    <string name="config_check_all_btn">检测全部</string>
+    <string name="config_check_all_btn">检测全部源</string>
     <string name="config_total">共 %1$d 个接口</string>
     <string name="config_group_online">在线接口</string>
     <string name="config_group_local">本地接口</string>

@@ -48,22 +48,6 @@
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/active"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="8dp"
-            android:background="@drawable/selector_iface_tab_bg"
-            android:paddingLeft="10dp"
-            android:paddingTop="5dp"
-            android:paddingRight="10dp"
-            android:paddingBottom="5dp"
-            android:text="@string/site_current"
-            android:textColor="@color/selector_iface_text"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/enableSwitch"
             android:layout_width="wrap_content"

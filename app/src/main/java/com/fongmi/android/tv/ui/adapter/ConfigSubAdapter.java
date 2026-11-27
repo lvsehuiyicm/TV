@@ -128,8 +128,10 @@ public class ConfigSubAdapter extends RecyclerView.Adapter<ConfigSubAdapter.View
         holder.binding.subtitle.setText(subtitle(holder.itemView.getContext(), item));
         holder.binding.dot.setBackgroundTintList(ColorStateList.valueOf(SourceChecker.gradeColor(getGrade(item.id))));
         boolean active = isActive(item);
-        holder.binding.active.setVisibility(active ? View.VISIBLE : View.GONE);
-        if (active) holder.binding.active.setSelected(true);
+        // 当前使用的那行开关变绿（健康点同款绿），其余行恢复默认色（holder 复用，active 为 false 时必须清掉 tint）。
+        ColorStateList switchTint = active ? ColorStateList.valueOf(SourceChecker.gradeColor(SourceChecker.GRADE_GREEN)) : null;
+        holder.binding.enableSwitch.setTrackTintList(switchTint);
+        holder.binding.enableSwitch.setThumbTintList(switchTint);
         holder.binding.divider.setVisibility(position == getItemCount() - 1 ? View.GONE : View.VISIBLE);
         // 开关先清监听再设状态（复用 holder 时 setChecked 不触发 onToggle），拨动走 onToggle。
         holder.binding.enableSwitch.setOnCheckedChangeListener(null);

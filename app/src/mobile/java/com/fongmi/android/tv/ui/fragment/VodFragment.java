@@ -244,9 +244,9 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     private void refreshIfaceTabs() {
         if (mIfaceAdapter == null) return;
 
-        // 0.1.118：一行只放前 4 个接口＋全部（第 5 个固定不滚动）。
+        // 0.1.124：一行只放前 3 个接口＋全部（第 4 个固定不滚动）。
         List<ConfigManager.Sub> displayed = enabledVodSubs();
-        if (displayed.size() > 4) displayed = displayed.subList(0, 4);
+        if (displayed.size() > 3) displayed = displayed.subList(0, 3);
         if (mIfaceLayoutManager != null) mIfaceLayoutManager.setSpanCount(displayed.size() + 1);
         mIfaceAdapter.refresh(displayed, ConfigManager.getActiveId());
     }
@@ -297,7 +297,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     public void onIfaceOrderChanged(List<ConfigManager.Sub> subs) {
         ConfigManager.saveVodOrder(subs);
 
-        // 0.1.119：面板里拖完的顺序可能改变 tab 行前 4，当场刷一次。
+        // 0.1.119：面板里拖完的顺序可能改变 tab 行前 3，当场刷一次。
         refreshIfaceTabs();
     }
 

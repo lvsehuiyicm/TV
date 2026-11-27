@@ -113,7 +113,7 @@
     <string name="site_interface">接口：%1$s</string>
     <string name="config_manage_iface">管理接口</string>
     <string name="config_title">介面設定</string>
-    <string name="config_check_all_btn">檢測全部</string>
+    <string name="config_check_all_btn">檢測全部源</string>
     <string name="config_total">共 %1$d 個介面</string>
     <string name="config_group_online">線上接口</string>
     <string name="config_group_local">本地接口</string>
