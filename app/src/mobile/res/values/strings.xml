@@ -186,6 +186,8 @@
     <string name="config_sub_live_online">Online</string>
     <string name="config_sub_live_local">Local</string>
     <string name="config_drag_handle">Drag to reorder</string>
+    <string name="config_enable">Enable</string>
+    <string name="config_disable">Disable</string>
     <string name="live_next">Next</string>
     <string name="config_kind_folder">Folder</string>
     <string name="config_kind_file">Single source</string>

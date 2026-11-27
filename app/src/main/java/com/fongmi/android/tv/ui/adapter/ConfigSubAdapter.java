@@ -29,6 +29,8 @@ public class ConfigSubAdapter extends RecyclerView.Adapter<ConfigSubAdapter.View
     public interface OnClickListener {
         void onRowClick(ConfigManager.Sub item);
 
+        void onToggle(ConfigManager.Sub item, boolean enabled);
+
         void onEdit(ConfigManager.Sub item);
 
         void onDelete(ConfigManager.Sub item);
@@ -153,10 +155,13 @@ public class ConfigSubAdapter extends RecyclerView.Adapter<ConfigSubAdapter.View
     }
 
     private void showMenu(View anchor, ConfigManager.Sub item) {
-        new MaterialAlertDialogBuilder(anchor.getContext())
-                .setItems(new CharSequence[]{anchor.getContext().getString(R.string.config_edit), anchor.getContext().getString(R.string.config_delete)}, (dialog, which) -> {
+        Context context = anchor.getContext();
+        CharSequence toggle = context.getString(item.enabled ? R.string.config_disable : R.string.config_enable);
+        new MaterialAlertDialogBuilder(context)
+                .setItems(new CharSequence[]{context.getString(R.string.config_edit), context.getString(R.string.config_delete), toggle}, (dialog, which) -> {
                     if (which == 0) listener.onEdit(item);
-                    else listener.onDelete(item);
+                    else if (which == 1) listener.onDelete(item);
+                    else listener.onToggle(item, !item.enabled);
                 })
                 .show();
     }

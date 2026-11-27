@@ -125,6 +125,8 @@
     <string name="config_sub_live_online">線上</string>
     <string name="config_sub_live_local">本地</string>
     <string name="config_drag_handle">拖曳排序</string>
+    <string name="config_enable">啟用</string>
+    <string name="config_disable">停用</string>
     <string name="live_next">接下來</string>
     <string name="config_kind_folder">文件夾</string>
     <string name="config_kind_file">單源</string>

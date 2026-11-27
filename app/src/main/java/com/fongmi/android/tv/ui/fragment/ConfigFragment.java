@@ -731,6 +731,24 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
         }
     }
 
+    /** 长按菜单里的“启用/停用”：原样恢复 0.1.121 的开关逻辑（开关在 0.1.122 重排版时拿掉了，入口改到长按菜单）。 */
+    @Override
+    public void onToggle(ConfigManager.Sub item, boolean enabled) {
+        if (item.tab == ConfigManager.TAB_VOD) {
+            if (!enabled && item.enabled && !item.id.equals(ConfigManager.getActiveId())) {
+                // 点的是已开但不是当前用的：切成当前用的，不关掉。
+                ConfigManager.activateVod(item, getCallback());
+                refresh();
+                return;
+            }
+            if (enabled) ConfigManager.activateVod(item, getCallback());
+            else ConfigManager.deactivateVod(item, getCallback());
+        } else {
+            if (enabled) ConfigManager.activateLive(item, getCallback());
+            else ConfigManager.deactivateLive(item, getCallback());
+        }
+    }
+
     @Override
     public void onEdit(ConfigManager.Sub item) {
         LinearLayout layout = new LinearLayout(requireContext());
