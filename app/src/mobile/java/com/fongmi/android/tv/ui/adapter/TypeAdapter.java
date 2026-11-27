@@ -34,6 +34,10 @@ public class TypeAdapter extends RecyclerView.Adapter<TypeAdapter.ViewHolder> {
     }
 
     public void addAll(Result result) {
+        // 0.1.126：改成整体替换（先清后加）。以前是追加，homeContent() 必须先 clear()，
+        // 否则切接口后分类 chips 会翻倍；现在 setAdapter 拿到新数据时直接替换，旧内容
+        // 可以一直留到新数据到。唯一调用方是 VodFragment.setAdapter。
+        mItems.clear();
         mItems.addAll(result.getTypes());
         mItems.removeIf(type -> type.isHome() || "推荐".equals(type.getTypeName()));
         if (mItems.isEmpty()) mItems.addAll(result.getTypes());

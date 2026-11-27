@@ -12,6 +12,7 @@ import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.exception.SpiderLoadException;
+import com.fongmi.android.tv.utils.ConfigManager;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.github.catvod.utils.Task;
@@ -45,7 +46,7 @@ public class SiteViewModel extends ViewModel {
     private final ViewModelTaskRunner<TaskType> tasks;
     private final ViewModelSearchRunner searches;
 
-    /** 首页内存缓存：key = 接口 URL + 首页源 key。只放内存，退出即丢；只用来先显示，后台一定再拉一次（见 homeContent）。 */
+    /** 首页内存缓存：key = 接口身份（activeId）+ 首页源 key。只放内存，退出即丢；只用来先显示，后台一定再拉一次（见 homeContent）。 */
     private final Map<String, Result> homeCache = new HashMap<>();
 
     // 0.1.110 B(a)：首页请求的世代号。每次发起新的首页请求或切到分类/详情/搜索
@@ -122,8 +123,14 @@ public class SiteViewModel extends ViewModel {
         return current != null && home != null && current.getKey().equals(home.getKey());
     }
 
+    /**
+     * 0.1.126：首页缓存 key 改用接口身份（activeId）+ 首页源 key，不再绑配置 URL。
+     * 以前 key 里是配置 URL：切文件夹接口时配置 URL 是上一个在线接口的，换个在线
+     * 接口再切回文件夹就 miss；现在只要是同一个接口 + 同一个首页源就命中，切回秒出。
+     * 不同接口下同名首页源也不会串（activeId 不同就是两个 key）。
+     */
     private static String homeCacheKey(Site home) {
-        return VodConfig.getUrl() + "|" + (home == null ? "" : home.getKey());
+        return ConfigManager.getActiveId() + "|" + (home == null ? "" : home.getKey());
     }
 
     public void categoryContent(String key, String tid, String page, boolean filter, HashMap<String, String> extend) {

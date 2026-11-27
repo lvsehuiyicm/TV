@@ -738,18 +738,24 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
     /** 长按菜单里的“启用/停用”：原样恢复 0.1.121 的开关逻辑（开关在 0.1.122 重排版时拿掉了，入口改到长按菜单）。 */
     @Override
     public void onToggle(ConfigManager.Sub item, boolean enabled) {
+        // 0.1.126：拨开关只改标志，不立即全量加载（瞬时）。真正的加载推迟到离开配置页
+        // 时（点播走 ConfigActivity.onPause 的 flushVodReloadPending，直播走进直播页时
+        // 的 takeLiveReloadPending）。开关语义原样不动：点已开但不是当前用的还是切成
+        // 当前用的，不关掉。
         if (item.tab == ConfigManager.TAB_VOD) {
             if (!enabled && item.enabled && !item.id.equals(ConfigManager.getActiveId())) {
                 // 点的是已开但不是当前用的：切成当前用的，不关掉。
-                ConfigManager.activateVod(item, getCallback());
+                ConfigManager.activateVodLight(item);
                 refresh();
                 return;
             }
-            if (enabled) ConfigManager.activateVod(item, getCallback());
-            else ConfigManager.deactivateVod(item, getCallback());
+            if (enabled) ConfigManager.activateVodLight(item);
+            else ConfigManager.deactivateVodLight(item);
+            refresh();
         } else {
-            if (enabled) ConfigManager.activateLive(item, getCallback());
-            else ConfigManager.deactivateLive(item, getCallback());
+            if (enabled) ConfigManager.activateLiveLight(item);
+            else ConfigManager.deactivateLiveLight(item);
+            refresh();
         }
     }
 

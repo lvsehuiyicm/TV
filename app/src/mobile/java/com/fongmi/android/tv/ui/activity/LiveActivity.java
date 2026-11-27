@@ -29,6 +29,7 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.LiveConfig;
+import com.fongmi.android.tv.utils.ConfigManager;
 import com.fongmi.android.tv.bean.Channel;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Epg;
@@ -320,7 +321,10 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
     }
 
     private void checkLive() {
-        if (isEmpty()) LiveConfig.get().init().load(getCallback());
+        // 0.1.126：配置页拨了直播开关时，地址已换好、加载推迟到这里。进直播页就把攒下
+        // 的加载做掉；没攒时走原来的逻辑（空才加载，否则直接用现成的）。
+        if (ConfigManager.takeLiveReloadPending()) LiveConfig.load(LiveConfig.get().getConfig(), getCallback());
+        else if (isEmpty()) LiveConfig.get().init().load(getCallback());
         else getLive();
     }
 
@@ -1421,6 +1425,14 @@ public class LiveActivity extends PlaybackActivity implements TouchInput.Listene
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) Util.hideSystemUI(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 0.1.126：已打开的直播页回到前台时，把配置页拨开关攒下的直播加载做掉。
+        // 新建时 checkLive() 已经消费过一次，这里取到的一定是 false，不会重复加载。
+        if (ConfigManager.takeLiveReloadPending()) LiveConfig.load(LiveConfig.get().getConfig(), getCallback());
     }
 
     @Override

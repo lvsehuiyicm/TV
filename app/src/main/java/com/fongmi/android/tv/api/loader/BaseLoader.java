@@ -99,23 +99,26 @@ public class BaseLoader {
             // 都调 clear() 换掉 JarLoader，parseJar 缓存永远是空的，每次切换都要
             // 重新 DexClassLoader + 跑 Init.init() + 重启 Go（“Go 启动成功”反复弹），
             // 切换要 5–10 秒。退出时仍全部销毁。
+            // 0.1.126：非退出时同样保留 PyLoader / JsLoader / WebLoader / NodeLoader
+            //（及其 spiders 缓存）。以前每次切接口都换新实例，新实例的 spiders map
+            // 是空的，py 爬虫要现场重建（影视py 切换 17 秒的主因之一）。爬虫按 key
+            // 缓存，本地 py/js 文件跨接口是同一个文件，复用安全（NodeLoader 的 key
+            // 里本来就带 api）；jar 站 0.1.108 起已有保留先例。退出时仍全部销毁。
+            // 注意：改过内容的 .py/.js 文件，复用的爬虫还是旧代码，改完要重启 app
+            // 才生效（和 jar 站 0.1.108 起的行为一致）；新导入的文件不受影响（新 key）。
             List<SpiderLoader> toClear = exiting
                     ? Stream.of(nodeLoader, jarLoader, pyLoader, jsLoader, webLoader).filter(Objects::nonNull).toList()
-                    : Stream.of(nodeLoader, pyLoader, jsLoader, webLoader).filter(Objects::nonNull).toList();
+                    : List.of();
             previous = toClear;
             retiredLoaders.addAll(previous);
             retired = exiting ? new ArrayList<>(retiredLoaders) : List.of();
             if (exiting) retiredLoaders.clear();
-            if (exiting) jarLoader = new JarLoader();
-            nodeLoader = new NodeLoader();
             if (exiting) {
+                jarLoader = new JarLoader();
+                nodeLoader = new NodeLoader();
                 pyLoader = null;
                 jsLoader = null;
                 webLoader = null;
-            } else {
-                if (pyLoader != null) pyLoader = new PyLoader(pyLoader);
-                if (jsLoader != null) jsLoader = new JsLoader(jsLoader);
-                if (webLoader != null) webLoader = new WebLoader(webLoader);
             }
         }
         Task.execute(() -> clearLoaders(previous, retired));

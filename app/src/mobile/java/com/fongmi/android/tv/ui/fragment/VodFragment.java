@@ -177,6 +177,13 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     }
 
     private void setAdapter(Result result) {
+        // 0.1.126：加载失败（有报错信息、没分类也没内容）时不动旧内容，只关转圈——
+        // 报错 toast 已经由 ViewModel 发了，旧内容留着等回退加载完成再换；直接清空
+        // 会闪一下空白。成功/空结果正常整体替换（addAll 现在先清后加）。
+        if (result.getTypes().isEmpty() && result.getList().isEmpty() && !TextUtils.isEmpty(result.getMsg())) {
+            hideProgress();
+            return;
+        }
         mAdapter.addAll(mResult = result);
         List<Class> types = new ArrayList<>();
         for (int i = 0; i < mAdapter.getItemCount(); i++) types.add(mAdapter.get(i));
@@ -315,7 +322,9 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
             public void start() {
                 mAutoFirst = true;
                 showProgress();
-                hideContent();
+                // 0.1.126：点 tab 不再立刻 hideContent()。旧首页继续显示（上面只盖一个
+                // 小转圈），等新接口数据到了 setAdapter 再整体替换——和 OK影视+ 同款。
+                // 以前点下就空白转圈 7–17 秒。
                 setSourceBar();
 
                 // 0.1.108：每次加载开始都把 tab 选中态刷成当前 activeId。自动换源/
@@ -382,11 +391,6 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         mBinding.progress.getRoot().setVisibility(View.GONE);
     }
 
-    private void hideContent() {
-        mBinding.type.setVisibility(View.INVISIBLE);
-        mBinding.content.setVisibility(View.INVISIBLE);
-    }
-
     private void showContent() {
         mBinding.type.setVisibility(View.VISIBLE);
         mBinding.content.setVisibility(View.VISIBLE);
@@ -396,8 +400,9 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         exitFocused();
         showProgress();
         setFabVisible();
-        mAdapter.clear();
-        mSectionAdapter.clear();
+        // 0.1.126：这里不再先 clear() 两个 adapter。旧首页留着，等新数据到了 setAdapter
+        // 再整体替换（addAll 现在先清后加）。以前配置加载完、首页数据还没回来就先清空，
+        // 又是一段空白。
         mAutoFirst = true;
         mViewModel.homeContent();
     }
@@ -446,7 +451,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
             public void start() {
                 mAutoFirst = true;
                 showProgress();
-                hideContent();
+                // 0.1.126：同 getCallback，切配置时旧首页继续显示，不先藏起来。
                 setSourceBar();
             }
 

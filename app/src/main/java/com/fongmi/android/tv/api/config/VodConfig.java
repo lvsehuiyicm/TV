@@ -14,6 +14,7 @@ import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.Callback;
+import com.fongmi.android.tv.utils.ConfigJsonCache;
 import com.fongmi.android.tv.utils.ConfigManager;
 import com.fongmi.android.tv.utils.ParseStore;
 import com.fongmi.android.tv.utils.ScriptManager;
@@ -168,6 +169,17 @@ public class VodConfig extends BaseConfig {
         });
     }
 
+    /**
+     * 0.1.126：文件夹/单文件接口轻量切换用的本地 sites/home 替换。只换数据，不发事件
+     *（事件由调用方发一次），不碰 parses/rules/doh 等在线配置的字段。resetHome 在这里
+     * 消费掉（已经按新接口选好首页了），不留给下一次加载再重置一次。
+     */
+    public void setLocalSites(List<Site> sites, Site home) {
+        this.sites = sites == null ? Collections.emptyList() : sites;
+        resetHome = false;
+        setHome(getConfig(), home == null ? new Site() : home, true);
+    }
+
     public VodConfig init() {
         return config(Config.vod());
     }
@@ -237,7 +249,7 @@ public class VodConfig extends BaseConfig {
         NodeRuntimeApi.LoadedConfig loaded = null;
         try {
             if (node) loaded = runtime.loadConfig(config.getUrl());
-            String json = node ? loaded.json() : isLocalFile(config.getUrl()) ? readLocalText(config.getUrl()) : Decoder.getJson(UrlUtil.convert(config.getUrl()), TAG);
+            String json = node ? loaded.json() : isLocalFile(config.getUrl()) ? readLocalText(config.getUrl()) : getConfigJson(config.getUrl());
             runtime.prune(loaded, Config.getAll(VOD).stream().map(Config::getUrl).toList(), config.getUrl());
             Staged staged = checkJson(config, Json.parse(json).getAsJsonObject(), loaded);
             if (staged != null) commitIfCurrent(config, staged);
@@ -245,6 +257,19 @@ public class VodConfig extends BaseConfig {
             if (node) runtime.fail(loaded);
             throw e;
         }
+    }
+
+    /**
+     * 0.1.126：在线接口的配置 JSON 先查缓存（内存 + 磁盘，10 分钟有效），命中直接用，
+     * 不再重新拉；失效才联网拉，拉成功写缓存。拉失败抛异常，走原有失败兜底（0.1.103）。
+     */
+    private static String getConfigJson(String url) throws Throwable {
+        String fetchUrl = UrlUtil.convert(url);
+        String cached = ConfigJsonCache.get(fetchUrl);
+        if (cached != null) return cached;
+        String json = Decoder.getJson(fetchUrl, TAG);
+        ConfigJsonCache.put(fetchUrl, json);
+        return json;
     }
 
     /**

@@ -13,14 +13,20 @@ import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Site;
+import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.impl.Callback;
 import com.github.catvod.utils.Crypto;
 import com.github.catvod.utils.Prefers;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.File;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 配置管理：订阅列表（文件夹 / 单个源 / 在线接口 / 本地包 / 直播源）。
@@ -227,6 +233,7 @@ public class ConfigManager {
 
     /** 打开一个点播订阅：在线接口/本地包会加载成当前配置，文件夹/单文件会切成当前接口；开关互不影响，多个接口可以同时开着。 */
     public static void activateVod(Sub sub, Callback callback) {
+        vodReloadPending = false;
         sub.enabled = true;
         update(sub);
         // 0.1.96：先记下旧接口 id。之前这里先 setActiveId 再加载，新接口加载失败时
@@ -245,7 +252,66 @@ public class ConfigManager {
         Log.i("VodSwitch", "activate target=" + sub.name + " prevId=" + prevId + " switching=" + switching);
         Callback guarded = guardedCallback(sub, prevId, new java.util.HashSet<>(), 0, callback);
         if (sub.isInterface()) VodConfig.load(Config.find(sub.getConfigUrl(), 0), guarded);
-        else reloadVod(guarded);
+        // 0.1.126：文件夹/单文件接口轻量切换：不调 VodConfig.load（不重拉上一个在线接口
+        // 的配置），只换本地 sites/home，事件驱动首页刷新。
+        else activateLocal(sub, guarded);
+    }
+
+    /**
+     * 0.1.126：文件夹/单文件接口轻量切换。原来这里走 reloadVod = 重载上一个在线接口的
+     * 配置，切本地文件夹也要先等一次在线拉取（约 7 秒），再加 py 首页拉取，才有 17 秒。
+     * 现在不加载：先取消可能在飞的上一次加载（免得它后提交覆盖），再按文件夹/文件
+     * 从本地脚本里拼 sites/home，发一次事件驱动首页刷新。
+     */
+    private static void activateLocal(Sub sub, Callback callback) {
+        VodConfig.get().cancel();
+        List<Site> sites = localSites(sub);
+        Site home = sites.isEmpty() ? new Site() : sites.get(0);
+        VodConfig.get().setLocalSites(sites, home);
+        ConfigEvent.vod();
+        callback.success();
+    }
+
+    /** 0.1.126：文件夹/单文件接口自己的源（与 VodConfig.initSite 里本地脚本那段同款过滤/重命名/同步）。 */
+    private static List<Site> localSites(Sub sub) {
+        List<Site> sites = new ArrayList<>();
+        for (Site site : ScriptManager.get().scan()) {
+            String path = localPath(site);
+            if (path == null) continue;
+            if (sub.isFolder() && !path.startsWith(sub.link + "/")) continue;
+            if (sub.isFile() && !path.equals(sub.link)) continue;
+            sites.add(site);
+        }
+        sites.removeIf(site -> SiteOrder.isRemoved(site.getKey()) || isScriptDisabled(site) || !isSiteVisible(site));
+        sites.forEach(site -> { String name = SiteOrder.getName(site.getKey()); if (name != null) site.setName(name); });
+        Map<String, Site> items = Site.findAll().stream().collect(Collectors.toMap(Site::getKey, Function.identity()));
+        sites.forEach(site -> site.sync(items.get(site.getKey())));
+        return sites;
+    }
+
+    /**
+     * 0.1.126：从脚本源的 api 反解本地路径。Site.objectFrom 会把 file:// api 转成本地
+     * 服务器 http 地址（/file/ 后面是 URL 编码的路径），直接用 SiteOrder.getLocalPath
+     * 会对每个源都重新扫一遍文件夹（131 个源就是 131 次扫盘），这里只做字符串解析；
+     * 解析不到再回退到 getLocalPath。
+     */
+    private static String localPath(Site site) {
+        String api = site.getApi();
+        if (api != null) {
+            int idx = api.indexOf("/file/");
+            if (idx >= 0) {
+                try {
+                    String path = URLDecoder.decode(api.substring(idx + 6), "UTF-8");
+                    if (new File(path).isFile()) return path;
+                } catch (Exception ignored) {
+                }
+            }
+            if (api.startsWith("file://")) {
+                String path = api.substring(7);
+                if (new File(path).isFile()) return path;
+            }
+        }
+        return SiteOrder.getLocalPath(site);
     }
 
     /**
@@ -266,11 +332,15 @@ public class ConfigManager {
                     Sub next = nextInterface(tried, sub);
                     if (next != null) {
                         tried.add(next.id);
+                        // 0.1.126：自动换源重试时不再叠转圈——先关掉第一次加载的转圈，
+                        // 重试静默在后台跑（只留“正在自动换源…”提示），成功/失败再一次性提示。
+                        Notify.dismiss();
                         Notify.show("正在自动换源…");
                         setActiveId(next.id);
                         Callback nextGuarded = guardedCallback(next, prevId, tried, attempts + 1, callback);
-                        if (next.isInterface()) VodConfig.load(Config.find(next.getConfigUrl(), 0), nextGuarded);
-                        else reloadVod(nextGuarded);
+                        Callback retry = silentStart(nextGuarded);
+                        if (next.isInterface()) VodConfig.load(Config.find(next.getConfigUrl(), 0), retry);
+                        else reloadVod(retry);
                         return;
                     }
                 }
@@ -338,6 +408,7 @@ public class ConfigManager {
 
     /** 关掉一个点播订阅：是在用的，就切到另一个还开着的接口；没有就回到只有本地源。 */
     public static void deactivateVod(Sub sub, Callback callback) {
+        vodReloadPending = false;
         sub.enabled = false;
         update(sub);
         boolean wasActive = sub.id.equals(getActiveId());
@@ -377,6 +448,149 @@ public class ConfigManager {
 
     /** 用当前配置重新加载一次（接口切换、开关文件夹后刷新主页）。 */
     public static void reloadVod(Callback callback) {
+        vodReloadPending = false;
         VodConfig.load(VodConfig.get().getConfig(), callback);
+    }
+
+    // 0.1.126：拨开关攒下的待加载。开关只改标志不加载（瞬时），真正的加载推迟到
+    // 离开配置页时由 ConfigActivity 一次做掉（回首页生效）。只放内存，进程死了就丢，
+    // 开机本来就会按当前接口加载一次，不影响。
+    private static boolean vodReloadPending;
+    private static boolean liveReloadPending;
+
+    /** 0.1.126：拨开关用的静默回调——不弹转圈（转圈只属于用户主动点的那次加载），失败只弹一句提示。 */
+    private static final Callback SILENT = new Callback() {
+        @Override
+        public void error(String msg) {
+            Notify.show(msg);
+        }
+    };
+
+    /** 取走并清空点播待加载标志（取走一次就消费掉，免得重复加载）。 */
+    public static boolean takeVodReloadPending() {
+        boolean pending = vodReloadPending;
+        vodReloadPending = false;
+        return pending;
+    }
+
+    /** 取走并清空直播待加载标志。 */
+    public static boolean takeLiveReloadPending() {
+        boolean pending = liveReloadPending;
+        liveReloadPending = false;
+        return pending;
+    }
+
+    /**
+     * 0.1.126：离开配置页时，把拨开关攒下的点播待加载一次做掉（回首页生效）。
+     * 无待加载时什么都不做。走 activateVod（带自动换源/回退兜底），当前用的接口
+     * 是文件夹时走轻量切换；没有当前接口时回到默认配置。
+     */
+    public static void flushVodReloadPending() {
+        if (!takeVodReloadPending()) return;
+        Sub active = getActiveSub();
+        if (active != null) activateVod(active, SILENT);
+        else VodConfig.load(Config.vod(), SILENT);
+    }
+
+    /**
+     * 0.1.126：拨开关轻量版——只改 enabled/activeId，不加载（瞬时）。真正的加载
+     * 推迟到离开配置页时（flushVodReloadPending）。语义与 activateVod 相同，
+     * 只是把加载挪后：拨开一个接口就是切到它，拨开已是当前用的不变。
+     */
+    public static void activateVodLight(Sub sub) {
+        sub.enabled = true;
+        update(sub);
+        boolean switching = !sub.id.equals(getActiveId());
+        if (switching) VodConfig.get().setResetHome(true);
+        setActiveId(sub.id);
+        vodReloadPending = true;
+    }
+
+    /**
+     * 0.1.126：拨开关轻量版——只改 enabled/activeId，不加载。关的是当前用的，
+     * 就按 deactivateVod 同款逻辑选下一个还开着的接口（没有就回到只有本地源），
+     * 加载同样推迟到离开配置页；关的不是当前用的，首页不受影响，不用加载。
+     */
+    public static void deactivateVodLight(Sub sub) {
+        sub.enabled = false;
+        update(sub);
+        if (!sub.id.equals(getActiveId())) return;
+        for (Sub item : getSubs(TAB_VOD)) {
+            if (item.isInterface() && item.enabled) {
+                setActiveId(item.id);
+                vodReloadPending = true;
+                return;
+            }
+        }
+        setActiveId("");
+        vodReloadPending = true;
+    }
+
+    /**
+     * 0.1.126：拨开关轻量版（直播）——只改 enabled 和直播配置地址，不加载。
+     * 地址先换过来，配置页的“当前使用”绿开关立刻就对；真正的加载推迟到进直播页时
+     * （LiveActivity 消费 liveReloadPending）。
+     */
+    public static void activateLiveLight(Sub sub) {
+        sub.enabled = true;
+        update(sub);
+        LiveConfig.get().config(Config.find(sub.getConfigUrl(), 1));
+        liveReloadPending = true;
+    }
+
+    /**
+     * 0.1.126：拨开关轻量版（直播）——只改 enabled，不加载。按 deactivateLive 同款
+     * 逻辑选下一个还开着的直播源（没有就回到默认直播配置），地址先换过来，加载
+     * 推迟到进直播页时。
+     */
+    public static void deactivateLiveLight(Sub sub) {
+        sub.enabled = false;
+        update(sub);
+        for (Sub item : getSubs(TAB_LIVE)) {
+            if (item.enabled) {
+                LiveConfig.get().config(Config.find(item.getConfigUrl(), 1));
+                liveReloadPending = true;
+                return;
+            }
+        }
+        LiveConfig.get().config(Config.live());
+        liveReloadPending = true;
+    }
+
+    /**
+     * 0.1.126：自动换源重试用的静默包装——start() 不弹转圈（转圈只盖第一次加载），
+     * 其余原样转发。重试在后台跑，成功/失败再一次性提示。
+     */
+    private static Callback silentStart(Callback callback) {
+        return new Callback() {
+            @Override
+            public void start() {
+            }
+
+            @Override
+            public void success() {
+                callback.success();
+            }
+
+            @Override
+            public void success(String result) {
+                callback.success(result);
+            }
+
+            @Override
+            public void error() {
+                callback.error();
+            }
+
+            @Override
+            public void error(String msg) {
+                callback.error(msg);
+            }
+
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                callback.onFailure(call, e);
+            }
+        };
     }
 }
