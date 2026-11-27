@@ -10,7 +10,6 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
@@ -44,12 +43,10 @@ public class DataFragment extends BaseFragment {
 
     @Override
     protected void initEvent() {
-        mBinding.backupNow.setSelected(true);
         mBinding.backupNow.setOnClickListener(v -> onBackup());
         mBinding.restoreNow.setOnClickListener(v -> onRestore());
         mBinding.clearCache.setSelected(true);
         mBinding.clearCache.setOnClickListener(this::onCache);
-        mBinding.version.setOnClickListener(this::onVersion);
     }
 
     public void refresh() {
@@ -116,10 +113,6 @@ public class DataFragment extends BaseFragment {
         });
         LiveConfig.get().init().load();
         WallConfig.get().init().load();
-    }
-
-    private void onVersion(View view) {
-        Updater.get().start(requireActivity(), true);
     }
 
     private void onCache(View view) {

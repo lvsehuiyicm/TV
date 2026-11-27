@@ -9,7 +9,6 @@ import android.text.TextUtils;
 import android.view.MenuItem;
 import android.view.View;
 
-
 import androidx.annotation.NonNull;
 import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
@@ -58,6 +57,7 @@ import org.greenrobot.eventbus.ThreadMode;
 public class HomeActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener {
 
     private static final String STATE_ACTION_HANDLED = "action_handled";
+
     private static volatile int instanceCount;
 
     public static boolean isRunning() {
@@ -104,7 +104,8 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         orientation = getResources().getConfiguration().orientation;
         mBinding.navigation.setOnItemSelectedListener(this);
         initFragment(savedInstanceState);
-        Updater.get().start(this, false);
+        // 0.1.123：启动时不再自动检查应用版本、不弹升级提示；只保留一次性的运行模块更新检查。
+        Updater.get().checkModulesOnce();
         checkPermission();
     }
 

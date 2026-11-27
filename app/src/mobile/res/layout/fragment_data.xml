@@ -148,12 +148,12 @@
                         android:id="@+id/backupNow"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
-                        android:background="@drawable/selector_iface_tab_bg"
+                        android:background="?attr/selectableItemBackground"
                         android:gravity="center"
                         android:paddingStart="16dp"
                         android:paddingEnd="16dp"
                         android:text="@string/data_backup_now"
-                        android:textColor="@color/black"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -171,6 +171,14 @@
                         android:textStyle="bold" />
 
                 </androidx.appcompat.widget.LinearLayoutCompat>
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/data_disclaimer"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
 
             </androidx.appcompat.widget.LinearLayoutCompat>
 

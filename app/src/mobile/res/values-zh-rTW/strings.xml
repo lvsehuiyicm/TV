@@ -178,4 +178,5 @@
     <string name="data_backup_desc">把接口、播放設置備份到本地文件，換手機也能恢復</string>
     <string name="data_backup_now">立即備份</string>
     <string name="data_restore_now">恢復備份</string>
+    <string name="data_disclaimer">本应用仅供学习交流使用，不提供任何影视内容的存储与分发。所有内容版权归原权利人所有，请勿用于商业用途。使用本应用产生的任何风险与后果由用户自行承担。</string>
 </resources>

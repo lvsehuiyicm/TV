@@ -64,11 +64,16 @@ public class Updater {
         return Loader.INSTANCE;
     }
 
-    public void start(FragmentActivity activity, boolean force) {
-        if (!force && !modulesChecked) {
+    // 0.1.123：只触发一次性的运行模块更新检查，不检查应用版本、不弹升级提示。
+    public void checkModulesOnce() {
+        if (!modulesChecked) {
             modulesChecked = true;
             Task.execute(this::checkModules);
         }
+    }
+
+    public void start(FragmentActivity activity, boolean force) {
+        if (!force) checkModulesOnce();
         if (force) {
             Notify.show(R.string.update_check);
             Setting.putUpdate(true);

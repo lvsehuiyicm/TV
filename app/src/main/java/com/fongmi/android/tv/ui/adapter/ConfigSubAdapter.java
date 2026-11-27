@@ -130,13 +130,19 @@ public class ConfigSubAdapter extends RecyclerView.Adapter<ConfigSubAdapter.View
         boolean active = isActive(item);
         holder.binding.active.setVisibility(active ? View.VISIBLE : View.GONE);
         if (active) holder.binding.active.setSelected(true);
-        holder.binding.dragHandle.setVisibility(active ? View.GONE : View.VISIBLE);
         holder.binding.divider.setVisibility(position == getItemCount() - 1 ? View.GONE : View.VISIBLE);
+        // 开关先清监听再设状态（复用 holder 时 setChecked 不触发 onToggle），拨动走 onToggle。
+        holder.binding.enableSwitch.setOnCheckedChangeListener(null);
+        holder.binding.enableSwitch.setChecked(item.enabled);
+        holder.binding.enableSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> listener.onToggle(item, isChecked));
         holder.itemView.setOnClickListener(v -> listener.onRowClick(item));
+        // 长按行不再弹菜单，只做拖动调顺序（触发方式和原来 6 个点长按一致）。
         holder.itemView.setOnLongClickListener(v -> {
-            showMenu(holder.itemView, item);
+            if (touchHelper != null) touchHelper.startDrag(holder);
             return true;
         });
+        // 6 个点常显（当前使用行也一样，不然它没地方进编辑菜单）：点它出编辑菜单，长按拖动。
+        holder.binding.dragHandle.setOnClickListener(v -> showMenu(holder.itemView, item));
         holder.binding.dragHandle.setOnLongClickListener(v -> {
             if (touchHelper != null) touchHelper.startDrag(holder);
             return true;
@@ -154,14 +160,13 @@ public class ConfigSubAdapter extends RecyclerView.Adapter<ConfigSubAdapter.View
         }
     }
 
+    /** 点 6 个点出的编辑菜单：只剩改名/删除，启用/停用已交给行里的开关。 */
     private void showMenu(View anchor, ConfigManager.Sub item) {
         Context context = anchor.getContext();
-        CharSequence toggle = context.getString(item.enabled ? R.string.config_disable : R.string.config_enable);
         new MaterialAlertDialogBuilder(context)
-                .setItems(new CharSequence[]{context.getString(R.string.config_edit), context.getString(R.string.config_delete), toggle}, (dialog, which) -> {
+                .setItems(new CharSequence[]{context.getString(R.string.config_edit), context.getString(R.string.config_delete)}, (dialog, which) -> {
                     if (which == 0) listener.onEdit(item);
                     else if (which == 1) listener.onDelete(item);
-                    else listener.onToggle(item, !item.enabled);
                 })
                 .show();
     }

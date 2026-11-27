@@ -61,7 +61,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class VodFragment extends BaseFragment implements ConfigListener, SiteListener, FilterListener, TypeAdapter.OnClickListener, SectionAdapter.OnClickListener, IfaceTabAdapter.OnClickListener, IfaceSheetDialog.OnSelectListener, IfaceSheetDialog.OnOrderChangedListener, IfaceTabAdapter.OnTabOrderChangedListener {
+public class VodFragment extends BaseFragment implements ConfigListener, SiteListener, FilterListener, TypeAdapter.OnClickListener,
+        SectionAdapter.OnClickListener, IfaceTabAdapter.OnClickListener, IfaceSheetDialog.OnSelectListener, IfaceSheetDialog.OnOrderChangedListener,
+        IfaceTabAdapter.OnTabOrderChangedListener {
 
     private FragmentVodBinding mBinding;
     private SiteViewModel mViewModel;
@@ -111,11 +113,13 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         mBinding.searchBtn.setOnClickListener(v -> SearchActivity.start(requireActivity()));
         mBinding.settingsBtn.setOnClickListener(v -> ConfigActivity.start(requireActivity()));
         mBinding.sourceBar.setOnClickListener(v -> SitePickDialog.create().show(this));
+
         // 源管理（改名/删除/拖拽排序）仍保留：长按源条打开旧的 SiteDialog。
         mBinding.sourceBar.setOnLongClickListener(v -> {
             SiteDialog.create().change().show(this);
             return true;
         });
+
         mBinding.typeMenu.setOnClickListener(this::onTypeMenu);
         mBinding.top.setOnClickListener(this::onTop);
         mBinding.filter.setOnClickListener(this::onFilter);
@@ -128,8 +132,10 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         mBinding.ifaceTabs.setLayoutManager(mIfaceLayoutManager);
         mBinding.ifaceTabs.setAdapter(mIfaceAdapter = new IfaceTabAdapter(this));
         mIfaceAdapter.setOnTabOrderChangedListener(this::onTabOrderChanged);
+
         // 0.1.118：长按接口 tab 拖动换位置（左右拖，全部位不可拖，松手才存一次）。
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, 0) {
+
             @Override
             public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
                 if (viewHolder.getAdapterPosition() == mIfaceAdapter.getItemCount() - 1) return 0;
@@ -155,6 +161,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 mIfaceAdapter.dispatchOrderChanged();
             }
         }).attachToRecyclerView(mBinding.ifaceTabs);
+
         mBinding.type.setHasFixedSize(true);
         mBinding.type.setItemAnimator(null);
         mBinding.type.setAdapter(mAdapter = new TypeAdapter(this));
@@ -219,6 +226,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         Site home = getHome();
         if (TextUtils.isEmpty(home.getName())) return;
         mBinding.sourceName.setText(getString(R.string.site_source, home.getName()));
+
         // 健康点：与 SiteAdapter.onBindViewHolder 同款逻辑；key 为空（加载中的空 Site）时不查。
         if (home.getKey() == null) {
             mBinding.sourceDot.setVisibility(View.GONE);
@@ -235,6 +243,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
 
     private void refreshIfaceTabs() {
         if (mIfaceAdapter == null) return;
+
         // 0.1.118：一行只放前 4 个接口＋全部（第 5 个固定不滚动）。
         List<ConfigManager.Sub> displayed = enabledVodSubs();
         if (displayed.size() > 4) displayed = displayed.subList(0, 4);
@@ -242,16 +251,16 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         mIfaceAdapter.refresh(displayed, ConfigManager.getActiveId());
     }
 
-    /** 启用的点播订阅（接口在前、本地包在后，组内保持添加顺序）：tab 行与接口面板共用。 */
+    /** 启用的点播订阅（按订阅表里的保存顺序——用户拖拽后的顺序）：tab 行与接口面板共用。 */
     private static List<ConfigManager.Sub> enabledVodSubs() {
         List<ConfigManager.Sub> subs = ConfigManager.getSubs(ConfigManager.TAB_VOD);
         List<ConfigManager.Sub> enabled = new ArrayList<>();
         for (ConfigManager.Sub sub : subs) if (sub.enabled) enabled.add(sub);
-        // 0.1.96：在线接口排在前面、本地包排在后面。之前按添加顺序混排，在线
-        // （demo.json / 影视py）和本地包（RRZY）穿插，用着本地包时想切回在线要满列表
-        // 翻找、滑到最上面才看到。分组后在线接口固定在顶部，一眼找到。
-        // 用稳定排序原地排（各组内保持添加顺序），不重赋值 enabled（lambda 要捕获它）。
-        enabled.sort((a, b) -> Boolean.compare(!a.isInterface(), !b.isInterface()));
+
+        // 0.1.123：不再按在线在前、本地在后重排。0.1.96 的分组是为了找在线接口方便，
+        // 但它每次读都重排：面板里跨组拖完的顺序一关再开就弹回去，tab 行与面板也对不上。
+        // 现在显示顺序就是保存顺序（ConfigManager.saveVodOrder 存的顺序），拖完即所得；
+        // 以前拖过存盘的顺序本身已是在线在前，老用户打开看到的顺序不变。
         return enabled;
     }
 
@@ -287,6 +296,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     @Override
     public void onIfaceOrderChanged(List<ConfigManager.Sub> subs) {
         ConfigManager.saveVodOrder(subs);
+
         // 0.1.119：面板里拖完的顺序可能改变 tab 行前 4，当场刷一次。
         refreshIfaceTabs();
     }
@@ -307,6 +317,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 showProgress();
                 hideContent();
                 setSourceBar();
+
                 // 0.1.108：每次加载开始都把 tab 选中态刷成当前 activeId。自动换源/
                 // 回退改了 activeId 后不刷，tab 会停在用户点的接口上，而实际已是
                 // 另一个接口。
@@ -318,10 +329,12 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 Notify.dismiss();
                 Notify.show(msg);
                 showContent();
+
                 // 0.1.97：报错后把 tab 选中态刷回真实的 activeId。切换失败时
                 // guarded 回调已把 activeId 恢复成旧接口，但 tab 还停在新接口 X
                 // 上，不刷就会“tab 是 X、内容是旧接口”。
                 refreshIfaceTabs();
+
                 // 0.1.111：报错也是一个加载终态，片源条也要刷一次。静态 load()
                 // 的失败分支在调 error() 之前已把快照恢复（vod.home = oldHome），
                 // 此时 setSourceBar() 读到的是真实的旧首页源，不用等回退重载成功才纠正。
@@ -442,8 +455,10 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 Notify.dismiss();
                 Notify.show(msg);
                 showContent();
+
                 // 0.1.97：同上，报错后把 tab 选中态刷回真实的 activeId。
                 refreshIfaceTabs();
+
                 // 0.1.111：同 getCallback，报错后片源条也刷一次（快照已恢复）。
                 setSourceBar();
             }
