@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 0.1.136：选中态写死 @color/live_selected（#F1BB6C），不再用 ?attr/colorPrimary。
+     根因：app 主题 Theme.Base 的父主题是
+     Theme.Material3.DynamicColors.DayNight.NoActionBar（见 mobile 的 styles.xml），
+     动态取色会把 colorPrimary 覆盖成壁纸取的灰蓝色——0.1.135 录屏实测：选中项
+     （首页）图标最深色是 (64,64,128) 暗蓝灰，三个图标和三个汉字里琥珀色像素是 0 个，
+     选中只从黑变到暗蓝灰，肉眼几乎看不出。仓库里 colors.xml 的 live_selected
+     注释早就写明了这个坑：“写死 #F1BB6C，不用 ?attr/colorPrimary，因为 Material
+     动态取色会把它覆盖掉（实测选中的描边被动态取色改成了灰蓝色）”。
+     未选中态仍用 ?attr/colorOnSurface（实测近黑色，符合预期，不动）。
+     live_selected 在 app/src/main/res/values/colors.xml，全部 flavor 可用。 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="?attr/colorPrimary" android:state_checked="true" />
+    <item android:color="@color/live_selected" android:state_checked="true" />
     <item android:color="?attr/colorOnSurface" android:state_checked="false" />
 </selector>
