@@ -547,6 +547,46 @@
                     android:layout_height="1dp"
                     android:background="?attr/colorOutlineVariant" />
 
+                <!-- 0.1.130：弹幕接口行，点开 DanmakuApiDialog 自己填地址；右边显示当前生效地址，未填显示“未设置”。 -->
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:id="@+id/danmakuApi"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:orientation="horizontal"
+                    android:paddingStart="12dp"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="12dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        android:text="@string/player_danmaku_api"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/danmakuApiText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:gravity="end"
+                        android:maxLines="1"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        tools:text="未设置" />
+
+                </androidx.appcompat.widget.LinearLayoutCompat>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="?attr/colorOutlineVariant" />
+
                 <androidx.appcompat.widget.LinearLayoutCompat
                     android:id="@+id/adblock"
                     android:layout_width="match_parent"

@@ -3,6 +3,7 @@ package com.fongmi.android.tv.ui.fragment;
 import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,8 +18,10 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.databinding.FragmentSettingPlayerBinding;
 import com.fongmi.android.tv.impl.BufferListener;
+import com.fongmi.android.tv.impl.DanmakuListener;
 import com.fongmi.android.tv.impl.UaListener;
 import com.fongmi.android.tv.player.mpv.MpvUtil;
+import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.DecodeSetting;
 import com.fongmi.android.tv.setting.DisplaySetting;
 import com.fongmi.android.tv.setting.PlayerButtonsSetting;
@@ -29,6 +32,7 @@ import com.fongmi.android.tv.ui.activity.HomeActivity;
 import com.fongmi.android.tv.ui.activity.ParseActivity;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.dialog.BufferDialog;
+import com.fongmi.android.tv.ui.dialog.DanmakuApiDialog;
 import com.fongmi.android.tv.ui.dialog.DisplaySettingDialog;
 import com.fongmi.android.tv.ui.dialog.MpvConfDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerButtonsEditDialog;
@@ -43,7 +47,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.List;
 import java.util.Set;
 
-public class SettingPlayerFragment extends BaseFragment implements UaListener, BufferListener {
+public class SettingPlayerFragment extends BaseFragment implements UaListener, BufferListener, DanmakuListener {
 
     private FragmentSettingPlayerBinding mBinding;
     private String[] background;
@@ -94,6 +98,7 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, B
         refreshLongPressText();
         refreshScaleText();
         refreshParseText();
+        refreshDanmakuApiText();
     }
 
     @Override
@@ -128,6 +133,7 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, B
         mBinding.ua.setOnClickListener(this::onUa);
         mBinding.cronet.setOnClickListener(this::setCronet);
         mBinding.parseManage.setOnClickListener(v -> ParseActivity.start(requireActivity()));
+        mBinding.danmakuApi.setOnClickListener(this::onDanmakuApi);
         mBinding.incognito.setOnClickListener(this::setIncognito);
     }
 
@@ -223,6 +229,26 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, B
         String name = VodConfig.get().getParse().getName();
         if (name.isEmpty()) name = getString(R.string.parse_god);
         mBinding.parseManageText.setText(getString(R.string.parse_manage_count, count, name));
+    }
+
+    // 0.1.130：弹幕接口行。点开现成的 DanmakuApiDialog 让用户自己填地址；确认后
+    // DanmakuApiDialog 回调本 Fragment 的 setDanmakuApi（DanmakuListener），
+    // 保存后刷新本行显示。右边显示当前生效地址（用户填的优先，否则取配置 JSON 的
+    // "danmaku" 字段），没填过显示“未设置”。
+    private void onDanmakuApi(View view) {
+        DanmakuApiDialog.show(this);
+    }
+
+    @Override
+    public void setDanmakuApi(String url) {
+        DanmakuSetting.putApiUrl(url);
+        refreshDanmakuApiText();
+    }
+
+    private void refreshDanmakuApiText() {
+        String url = DanmakuSetting.getEffectiveApiUrl();
+        if (TextUtils.isEmpty(url)) mBinding.danmakuApiText.setText(R.string.player_danmaku_api_unset);
+        else mBinding.danmakuApiText.setText(url);
     }
 
     private void onLongPressSpeed(View view) {

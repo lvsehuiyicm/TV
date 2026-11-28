@@ -40,7 +40,7 @@ public class DanmakuSetting {
     private static final int MAX_MAX_FIXED_LINES = 10;
 
     public static boolean isLoad() {
-        return Prefers.getBoolean("danmaku_load");
+        return Prefers.getBoolean("danmaku_load", true);
     }
 
     public static void putLoad(boolean danmakuLoad) {
@@ -49,7 +49,7 @@ public class DanmakuSetting {
     }
 
     public static boolean isAuto() {
-        return Prefers.getBoolean("danmaku_auto");
+        return Prefers.getBoolean("danmaku_auto", true);
     }
 
     public static void putAuto(boolean auto) {
@@ -302,10 +302,17 @@ public class DanmakuSetting {
         Prefers.put("danmaku_show_special", value);
     }
 
+    // 0.1.130：内置默认弹幕接口（Netlify 部署的 danmu_api，2026-11-28 已验证能拉到弹幕）。
+    // 用户没填地址、配置里也没写 danmaku 字段时，就用这个，装好直接能用。
+    // 用户自己填的地址优先，配置里的 danmaku 字段其次。
+    private static final String DEFAULT_API_URL = "https://chipper-belekoy-1ca22a.netlify.app";
+
     public static String getEffectiveApiUrl() {
         String userUrl = getApiUrl();
         if (!TextUtils.isEmpty(userUrl)) return userUrl;
-        return VodConfig.get().getConfig().getDanmaku();
+        String configUrl = VodConfig.get().getConfig().getDanmaku();
+        if (!TextUtils.isEmpty(configUrl)) return configUrl;
+        return DEFAULT_API_URL;
     }
 
     public static void resetAppearance() {

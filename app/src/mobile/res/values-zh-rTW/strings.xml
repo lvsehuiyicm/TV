@@ -173,6 +173,8 @@
     <string name="player_group_display">畫面</string>
     <string name="player_group_network">網絡</string>
     <string name="player_group_advanced">高級</string>
+    <string name="player_danmaku_api">彈幕接口</string>
+    <string name="player_danmaku_api_unset">未設定</string>
     <string name="theme_alpha_hint">讓頁面底色帶一點壁紙顏色，卡片與文字保持清晰</string>
     <string name="data_storage">存儲空間</string>
     <string name="data_about">關於</string>

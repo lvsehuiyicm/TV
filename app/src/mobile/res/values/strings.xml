@@ -240,6 +240,8 @@
     <string name="player_group_display">Display</string>
     <string name="player_group_network">Network</string>
     <string name="player_group_advanced">Advanced</string>
+    <string name="player_danmaku_api">Danmaku API</string>
+    <string name="player_danmaku_api_unset">Not set</string>
     <string name="theme_alpha_hint">Let the page show a hint of the wallpaper color, keeping cards and text clear</string>
     <string name="data_storage">Storage</string>
     <string name="data_about">About</string>
