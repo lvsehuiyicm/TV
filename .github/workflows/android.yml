@@ -174,7 +174,7 @@ jobs:
       - name: Wire FongMi media (source dependency)
         run: |
           set -euxo pipefail
-          git clone --branch release-1.11.0-fongmi --depth 1 https://github.com/FongMi/media.git ../media
+          git clone --branch release-1.11.0-fongmi --depth 1 https://github.com/yangxw8820/fongmi_media.git ../media
           sed -i 's/pluginManagement {/pluginManagement {\n    includeBuild("..\/media\/build-logic")\n    plugins { id("org.jetbrains.kotlin.android") version "2.2.0" }/' settings.gradle
           python3 .github/scripts/merge_toml.py
           for entry in common:common session:session exoplayer:exoplayer container:container decoder:decoder decoder-ffmpeg:decoder_ffmpeg ui:ui ui-danmaku:ui_danmaku database:database datasource:datasource datasource-okhttp:datasource_okhttp datasource-cronet:datasource_cronet extractor:extractor mpvplayer:mpvplayer exoplayer-hls:exoplayer_hls exoplayer-dash:exoplayer_dash exoplayer-rtsp:exoplayer_rtsp exoplayer-smoothstreaming:exoplayer_smoothstreaming; do
