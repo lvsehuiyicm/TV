@@ -97,6 +97,14 @@ public class SiteViewModel extends ViewModel {
         // 这里直接用 Task.submit 起请求，各站的请求互不取消、先出哪个算哪个；
         // 世代号 + 当前首页源双重校验，只让“最新、且仍是当前站”的那次推界面。
         int epoch = homeEpoch.incrementAndGet();
+        // 0.1.132（觅影 MY-4）：新首页请求先取消旧的未完成请求。旧请求跑完回来也会因世代号
+        // 丢弃，但不取消会占着线程池、拖慢新请求；被取消的旧请求不写缓存（回调里先判
+        // CancellationException 直接返回，见下面 error 分支）。只取消 homeFutures
+        // （首页的磁盘读+拉新），分类/详情走 tasks runner 不受影响。
+        synchronized (homeFutures) {
+            for (ListenableFuture<?> old : homeFutures) old.cancel(true);
+            homeFutures.clear();
+        }
         // 0.1.127：内存没命中时读磁盘缓存（上次的首页）。磁盘读放后台线程，不卡主线程；
         // 读到先显示，后台拉新的到了再替换。只当内存里还没有新结果时才贴（putIfAbsent
         // 原子判断：拉新先到了就不贴旧的，免得新结果被旧的盖回去）。
@@ -219,10 +227,24 @@ public class SiteViewModel extends ViewModel {
         // 0.1.110 B(b)：超时原来在 Notify.getError 里没有映射，返回 null，
         // 界面只剩静默空白。超时改给明确提示，可重试。
         if (message == null && isTimeout(error)) message = ResUtil.getString(R.string.error_load_timeout);
+        // 0.1.132：Notify.getError 只认 5 种错（模块缺失/Extract/JS 缺 Spider/JS 缺 cat.js/
+        // 爬虫加载失败），别的错一律返回 null，以前就静默 post Result.empty()——界面只剩
+        // “这里什么都没有”，不 toast、不存文件。0.1.131 的 4K咕噜就是这么静默失败的：
+        // -1 端口错没了（不再报 Invalid request options），但 homeContent 里别的错
+        // （比如 py 的 homeVideoContent 抛错）没人认，全被静默吞掉。现在认不出的错也写
+        // 诊断文件（load-error-*.txt，和 spider-error-*.txt 同目录），并给一句可见的
+        // 报错（异常类名+信息），不再静默空盒子。
+        if (message == null) {
+            String detail = error.getClass().getSimpleName();
+            if (error.getMessage() != null && !error.getMessage().isEmpty()) detail += ": " + error.getMessage();
+            if (detail.length() > 120) detail = detail.substring(0, 120) + "…";
+            message = detail;
+            logErrorFile("load-error", error);
+        }
         // 0.1.110 A.2.3 断点二：JS 爬虫加载失败时只留“爬虫加载失败”一句，
         // 看不到是哪一行抛的。把完整异常栈写进诊断文件，保存成功就在 toast
         // 后追加一句，xu 下次失败时把文件发我，就能定准那一行。
-        if (message != null && isSpiderLoadError(error) && logSpiderError(error)) {
+        if (message != null && isSpiderLoadError(error) && logErrorFile("spider-error", error)) {
             message += "，" + ResUtil.getString(R.string.error_spider_saved_hint);
         }
         liveData.postValue(message != null ? Result.error(message) : Result.empty());
@@ -250,12 +272,14 @@ public class SiteViewModel extends ViewModel {
     // 文件写在 app 外置存储目录（Android/data/com.zhulong.tv/files/，
     // 文件管理器可进），文件名带时间，如 spider-error-20261125-213000.txt，
     // 内容是完整异常栈（含 cause 链）。写失败返回 false，toast 不追加提示。
-    private static boolean logSpiderError(Throwable error) {
+    // 0.1.132：改成带前缀的通用写文件（spider-error 给爬虫加载失败，
+    // load-error 给 Notify.getError 认不出的其它加载失败），不再静默。
+    private static boolean logErrorFile(String prefix, Throwable error) {
         try {
             File dir = App.get().getExternalFilesDir(null);
             if (dir == null) return false;
             String stamp = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(new Date());
-            File file = new File(dir, "spider-error-" + stamp + ".txt");
+            File file = new File(dir, prefix + "-" + stamp + ".txt");
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
             error.printStackTrace(pw);

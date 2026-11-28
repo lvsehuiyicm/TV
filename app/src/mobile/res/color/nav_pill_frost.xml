@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 0.1.131：底部导航药丸的磨砂玻璃底色。?attr/colorSurface 跟主题走（亮色近白、深色深灰），
-     alpha 0.72 让它半透明：下面的海报透出来但被蒙上一层雾面，看着是磨砂玻璃，不是实心白底。
-     真逐像素模糊做不到（见 NOTES）：RenderEffect 会把导航自己的图标汉字也糊掉；加第三方模糊库
-     要改 build.gradle 依赖；Window 模糊只对窗口（弹窗）生效，不是对 Activity 里的一个 View。
-     所以用半透明底色做到最接近磨砂的观感。 -->
+<!-- 0.1.132：透明度由 0.72 降到 0.55。0.1.131 的 0.72 在 xu 的截图上看着还是白底，
+     海报透不出来（底色是浅色壁纸时更看不出透）。0.55 让下面的海报明显透出来、雾面感更强，
+     接近参考图（220158545_71_s4u7.jpg）那种半透明磨砂药丸；仍过半不透明，汉字图标看得清。
+     真逐像素模糊做不到（见 run151/NOTES.md 问题 3），半透明底色仍是约束内最接近磨砂的做法。 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:alpha="0.72" android:color="?attr/colorSurface" />
+    <item android:alpha="0.55" android:color="?attr/colorSurface" />
 </selector>

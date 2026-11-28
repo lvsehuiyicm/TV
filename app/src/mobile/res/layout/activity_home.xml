@@ -8,10 +8,16 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/navigation"/>
+    <!-- 0.1.132：layout_height 由 wrap_content 改成固定 46dp。实测（xu 截图 974x2048，
+         药丸左右边距 16dp=48px，得 1dp≈3.0px）：药丸顶到汉字底 = 119px ≈ 40dp，汉字底到药丸底
+         原来 56px ≈ 19dp（约 3mm，xu 说留白太多）。46dp - 40dp = 约 6dp ≈ 1mm，正好是 xu
+         要的“底边距离汉字 1 毫米”。内容是顶对齐的（图标在上、汉字在下，多余空间全在底边，
+         截图里汉字贴上、空白全在下就是证据），所以定高只收底边、不动汉字位置；46dp 大于内容
+         高 40dp，不会裁字。minHeight 44dp 留着（小于 46dp，不起作用）。 -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/navigation"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="46dp"
         android:layout_alignParentBottom="true"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
