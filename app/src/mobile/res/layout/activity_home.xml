@@ -6,14 +6,14 @@
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/container"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_above="@+id/navigation"/>
-    <!-- 0.1.133：layout_height 改回 wrap_content。0.1.132 定死 46dp 是错的：BottomNavigationView
-         有图标+汉字两行，自然高度约 56dp（0.1.131 wrap_content 时汉字完整显示就是证据），
-         46dp 直接把汉字那一行裁没了（xu 录屏已证实：药丸里只剩 3 个图标、没有汉字）。
-         教训：不要用固定死高度去赌内容高度，汉字完整显示是硬要求、1 毫米留白是软要求。
-         itemPaddingBottom 保持 0dp（0.1.132 的改动，不裁字的前提下尽量收底边留白）、
-         itemPaddingTop 4dp、minHeight 44dp 留着（小于自然高度，不起作用）。 -->
+        android:layout_height="match_parent" />
+    <!-- 0.1.134：内容不再 layout_above 导航栏，容器改为全高，药丸悬浮在内容之上，
+         药丸下面 16dp 的底边距就能露出来一点海报（对着参考图：他家药丸底边到屏幕底
+         约 14–26dp，烛龙 16dp 在这个区间里）。首页 sections 的 paddingBottom 同步
+         加到 88dp（见 fragment_vod.xml），最后一行海报才能完全滚到药丸上面。
+         itemPaddingTop 4dp → 10dp：0.1.133 实测药丸里图标+汉字整体偏上约 11–13px
+         （内容中心比药丸中心高约 6dp），顶部多 6dp 就把内容推到正中间。
+         仍是 wrap_content，不用固定死高度（0.1.132 的 46dp 教训），汉字不裁。 -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/navigation"
         android:layout_width="match_parent"
@@ -30,7 +30,7 @@
         app:itemIconTint="@color/selector_nav"
         app:itemTextColor="@color/selector_nav"
         app:itemPaddingBottom="0dp"
-        app:itemPaddingTop="4dp"
+        app:itemPaddingTop="10dp"
         app:labelVisibilityMode="labeled"
         app:menu="@menu/menu_nav"/>
 </RelativeLayout>

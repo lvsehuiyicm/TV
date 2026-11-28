@@ -30,7 +30,13 @@ import com.github.catvod.utils.RuntimeModule;
 import com.github.catvod.utils.Task;
 import com.google.gson.Gson;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class App extends Application implements Application.ActivityLifecycleCallbacks {
 
@@ -92,8 +98,32 @@ public class App extends Application implements Application.ActivityLifecycleCal
         super.attachBaseContext(base);
         Runtime.set(base);
         Runtime.setActivity(App::activity);
-        Runtime.setToast(text -> App.post(() -> Notify.show(text)));
+        // 0.1.134：Runtime.toast 是爬虫/运行时的错直接透传成 toast 的口子（AIGO、21:21 那句
+        // IllegalArgumentException 都是这么出来的），完全绕过 SiteViewModel.handleError，
+        // 所以没有 load-error 文件、toast 还被截断，查不到到底是哪个地址错了。
+        // 改法：toast 里带 "Exception" 的（即异常原样透传），除了弹 toast，还在后台写一份
+        // toast-error-*.txt（和 load-error 同目录），记下完整原文 + 时间。写文件失败静默，
+        // 绝不影响 toast 本身。只认 "Exception" 是为了不给普通提示 toast 也写文件。
+        Runtime.setToast(text -> App.post(() -> {
+            Notify.show(text);
+            if (text != null && text.contains("Exception")) Task.execute(() -> logToastError(text));
+        }));
         Runtime.setDialog(SpiderDialog::show);
+    }
+
+    private static void logToastError(String text) {
+        try {
+            File dir = App.get().getExternalFilesDir(null);
+            if (dir == null) return;
+            String stamp = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(new Date());
+            File file = new File(dir, "toast-error-" + stamp + ".txt");
+            String head = "time: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()) + "\n"
+                    + "source: Runtime.toast passthrough (bypasses SiteViewModel.handleError, no load-error file)\n\n";
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                out.write((head + text).getBytes(StandardCharsets.UTF_8));
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     @Override

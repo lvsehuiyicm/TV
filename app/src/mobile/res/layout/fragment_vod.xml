@@ -178,13 +178,16 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
+        <!-- 0.1.134：paddingBottom 16dp → 88dp。activity_home 的容器改成全高、药丸悬浮在内容上之后，
+             最后一行海报会被药丸盖住约一药丸高（约 70dp）+ 底边距 16dp；88dp 让最后一行能完全滚到药丸上面。
+             clipToPadding=false 本来就有，滚动时底边距区域是透明的、不遮内容。 -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/sections"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:orientation="vertical"
-            android:paddingBottom="16dp"
+            android:paddingBottom="88dp"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
         <FrameLayout

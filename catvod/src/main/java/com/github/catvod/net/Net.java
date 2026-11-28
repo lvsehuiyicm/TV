@@ -353,6 +353,15 @@ public final class Net implements AutoCloseable {
     }
 
     public Result request(String url, NetOptions options) {
+        // 0.1.134：非 http/https 的地址（典型是 0.1.131 改出来的 file:// api 被爬虫传给 Net）
+        // 到 OkHttp 里只会抛一句截断的 IllegalArgumentException（"Expected URL scheme..."），
+        // 还经 Runtime.toast 透传、没有诊断文件。先在这里拦下来：直接返回一句带完整地址的明错，
+        // 不再走到 OkHttp。file:// 本来就该走读文件（py 的 read_source / LocalAdapter），
+        // 不该进 Net；http/https 与 ws/wss（走 socket，不走这里）不受影响。
+        // 这些地址今天在 OkHttp 里本来就会失败，拦下来只换一句更清楚的错，不改变成败。
+        String checked = url == null ? "" : url.trim();
+        if (checked.isEmpty()) return Result.failure("Net request requires an http/https URL, got an empty URL");
+        if (!checked.regionMatches(true, 0, "http://", 0, 7) && !checked.regionMatches(true, 0, "https://", 0, 8)) return Result.failure("Net request requires an http/https URL, got: " + url);
         CompletableFuture<Result> future = requestAsync(url, options);
         try {
             return future.get();
