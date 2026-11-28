@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.ui.dialog;
 
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.viewbinding.ViewBinding;
 
@@ -13,13 +14,18 @@ import com.fongmi.android.tv.ui.adapter.SiteAdapter;
 import com.fongmi.android.tv.ui.adapter.SitePickAdapter;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.github.catvod.utils.Prefers;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class SitePickDialog extends BaseAlertDialog implements SiteListener, SitePickAdapter.OnItemLongClickListener {
 
+    /** 0.1.128：切换片源双排 / 单排的选择，记住这次的选择，下次打开还是它。 */
+    private static final String KEY_SITE_PICK_GRID = "site_pick_grid";
+
     private DialogSitePickBinding binding;
     private SiteListener listener;
     private SitePickAdapter adapter;
+    private boolean grid;
 
     public static SitePickDialog create() {
         return new SitePickDialog();
@@ -43,7 +49,8 @@ public class SitePickDialog extends BaseAlertDialog implements SiteListener, Sit
     @Override
     protected void initView() {
         adapter = new SitePickAdapter(SiteAdapter.buildList(), VodConfig.get().getHome().getKey());
-        binding.recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
+        grid = Prefers.getBoolean(KEY_SITE_PICK_GRID, false);
+        setLayoutManager();
         binding.recycler.setAdapter(adapter);
         binding.recycler.setItemAnimator(null);
         binding.recycler.setHasFixedSize(true);
@@ -63,7 +70,21 @@ public class SitePickDialog extends BaseAlertDialog implements SiteListener, Sit
             if (listener != null) listener.setSite(site);
             dismiss();
         });
+        binding.toggle.setOnClickListener(v -> {
+            // 0.1.128：双排 / 单排切换。图标显示的是点一下会切到的布局（单排时显示田字格，
+            // 双排时显示列表线），选完记下来，下次打开还是这次的样子。
+            grid = !grid;
+            Prefers.put(KEY_SITE_PICK_GRID, grid);
+            setLayoutManager();
+        });
         binding.cancel.setOnClickListener(v -> dismiss());
+    }
+
+    /** 0.1.128：按当前选择换布局管理器。双排是 2 列网格（源名 + 健康点都在格里，行布局不变，名字长了照常省略）；单排是原来的 1 列。 */
+    private void setLayoutManager() {
+        binding.recycler.setLayoutManager(grid ? new GridLayoutManager(requireContext(), 2) : new LinearLayoutManager(requireContext()));
+        binding.toggle.setImageResource(grid ? R.drawable.ic_view_list : R.drawable.ic_view_grid);
+        binding.recycler.requestLayout();
     }
 
     @Override

@@ -118,6 +118,7 @@ public final class FileChooser {
 
     private static void resolveFileUri(Uri uri, Consumer<Uri> callback, Runnable onFailure) {
         try {
+            sSourceDir = getSourceDir(uri);
             Uri file = resolveFileUri(uri);
             App.post(() -> callback.accept(file));
         } catch (IOException | SecurityException | IllegalArgumentException e) {
@@ -168,6 +169,41 @@ public final class FileChooser {
         if (split.length < 2) return null;
         if ("primary".equalsIgnoreCase(split[0])) return new File(Environment.getExternalStorageDirectory(), split[1]).getPath();
         return "/storage/" + docId.replace(":", "/");
+    }
+
+    /** 最近一次文件选择记下的源文件夹（单次有效，取后清空）。 */
+    private static String sSourceDir;
+
+    /**
+     * 0.1.128：从挑文件那个 Uri 反推它原来在哪个文件夹。只对外部存储文档有效，
+     * docId 里自带相对路径（如 primary:修改本地包/wo.json）；下载管理器、媒体库
+     * 的 Uri 推不出来，返回 null。导入时拿不到真实路径、只拷走 wo.json 一个文件
+     * 的话，订阅就靠这个目录去解析相对路径的 py/js/jar；推不出来时解析基准只能
+     * 是缓存目录，那条路走不通（见 VodConfig.getResolveBase）。
+     */
+    @Nullable
+    public static String getSourceDir(Uri uri) {
+        try {
+            if (!DocumentsContract.isDocumentUri(App.get(), uri)) return null;
+            if (!isExternalStorageDocument(uri)) return null;
+            String docId = DocumentsContract.getDocumentId(uri);
+            String[] split = docId.split(":", 2);
+            if (split.length < 2) return null;
+            String rel = split[1];
+            int slash = rel.lastIndexOf('/');
+            String parent = slash < 0 ? "" : rel.substring(0, slash);
+            if ("primary".equalsIgnoreCase(split[0])) return new File(Environment.getExternalStorageDirectory(), parent).getPath();
+            return "/storage/" + split[0] + (parent.isEmpty() ? "" : "/" + parent);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** 取走最近一次文件选择记下的源文件夹，没有记下时返回 null；取一次就清空，免得串到下一次选择。 */
+    public static String takeSourceDir() {
+        String dir = sSourceDir;
+        sSourceDir = null;
+        return dir;
     }
 
     @Nullable

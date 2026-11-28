@@ -199,6 +199,9 @@
     <string name="config_need_link">链接不能为空</string>
     <string name="config_bad_single">请选择 .py 或 .js 文件</string>
     <string name="config_bad_json">请选择 .json 文件</string>
+    <string name="config_refs_no_perm">引用的 %1$d 个文件读不到（%2$s）：先开“所有文件访问权限”，再删掉重新导入</string>
+    <string name="config_refs_missing">这个包缺 %1$d 个文件：%2$s</string>
+    <string name="config_refs_unknown">这个包是复制导入的，引用的文件可能找不到：先开“所有文件访问权限”，再删掉重新导入</string>
     <string name="config_bad_live">请选择 .txt 或 .m3u 文件</string>
     <string name="config_folder_exists">该文件夹已添加</string>
     <string name="config_file_exists">该文件已添加</string>
@@ -250,4 +253,8 @@
     <string name="file_perm_title">所有文件访问权限</string>
     <string name="file_perm_message">烛龙需要“所有文件访问权限”才能读到本地的源（py/js/json 本地包）。没开的话，本地导入的接口可能打不开、爬虫加载失败。点“去设置”，到权限页点允许就行。</string>
     <string name="file_perm_settings">去设置</string>
+    <string name="storage_perm_title">需要存储权限</string>
+    <string name="storage_perm_message">读取本地配置包需要访问手机存储。配置里引用的 spider.jar、.py 等文件会按同目录读取，请把整个包放在同一个文件夹。</string>
+    <string name="storage_perm_settings">去授权</string>
+    <string name="storage_perm_granted">已获得存储权限</string>
 </resources>

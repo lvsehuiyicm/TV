@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,11 +38,14 @@ import com.fongmi.android.tv.utils.CheckStore;
 import com.fongmi.android.tv.utils.ConfigManager;
 import com.fongmi.android.tv.utils.FileChooser;
 import com.fongmi.android.tv.utils.Notify;
+import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.ScriptManager;
 import com.fongmi.android.tv.utils.SourceChecker;
+import com.fongmi.android.tv.utils.UrlUtil;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.io.ByteArrayOutputStream;
@@ -98,6 +102,9 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
     private ConfigSubAdapter mAdapterLive;
     private int tab = ConfigManager.TAB_VOD;
     private int pickMode = PICK_SINGLE;
+    /** 0.1.128：点了“去授权”去设置页开权限，回来时继续之前被拦住的导入。 */
+    private boolean waitingStoragePerm;
+    private Runnable pendingImport;
     private boolean embedded;
     private ExecutorService checkExecutor;
     private volatile boolean checkCancelled;
@@ -173,6 +180,23 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
         mBinding.addLive.setOnClickListener(v -> showLiveAddDialog());
     }
 
+    /**
+     * 0.1.128：从设置页开完“所有文件访问权限”回来时，先弹 toast，再继续之前被拦住的导入。
+     * 没开权限回来时什么都不做，下次再导入还会再弹需要存储权限的对话框。
+     */
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (!waitingStoragePerm) return;
+        waitingStoragePerm = false;
+        if (!PermissionUtil.hasAllFilesPermission()) return;
+        Notify.show(R.string.storage_perm_granted);
+        if (pendingImport == null) return;
+        Runnable action = pendingImport;
+        pendingImport = null;
+        action.run();
+    }
+
     /** 本地接口组一种“添加”对应三种导入方式，点开选一种（沿用原来的三个导入入口）。 */
     private void showLocalAddDialog() {
         new MaterialAlertDialogBuilder(requireContext())
@@ -200,6 +224,7 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
     private void importLocalFile() {
         setTab(ConfigManager.TAB_VOD);
         pickMode = PICK_LOCAL;
+        if (!ensureStoragePermission(this::importLocalFile)) return;
         FileChooser.from(fileLauncher).show();
     }
 
@@ -218,6 +243,28 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
         setTab(ConfigManager.TAB_LIVE);
         pickMode = PICK_LOCAL;
         FileChooser.from(fileLauncher).show();
+    }
+
+    /**
+     * 0.1.128：读本地文件前要“所有文件访问权限”（Koreplay 式“需要存储权限”对话框）。
+     * 已给权限直接放行；打不开设置页的手机（Android 10 及以下）不拦，走原来的流程；
+     * 否则弹对话框，点“去授权”跳设置页，回来再继续导入。
+     * 不是只弹一次：权限没给、用户又来添加/导入本地接口，就再弹——它是首次安装提示的兜底。
+     */
+    private boolean ensureStoragePermission(Runnable onGranted) {
+        if (PermissionUtil.hasAllFilesPermission()) return true;
+        if (!PermissionUtil.canManageAllFiles(requireActivity())) return true;
+        pendingImport = onGranted;
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.storage_perm_title)
+                .setMessage(R.string.storage_perm_message)
+                .setNegativeButton(R.string.dialog_negative, (dialog, which) -> pendingImport = null)
+                .setPositiveButton(R.string.storage_perm_settings, (dialog, which) -> {
+                    waitingStoragePerm = true;
+                    PermissionUtil.openAllFilesSettings(requireActivity());
+                })
+                .show();
+        return false;
     }
 
     /** 只记下当前类型（onAdd / onFilePicked 靠它定 kind）；列表不再按类型切页，3 组一直都在。 */
@@ -692,6 +739,8 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
         if (uri == null || uri.getPath() == null) return;
         String path = uri.getPath();
         String lower = path.toLowerCase();
+        // 0.1.128：这次选择原来的文件夹（FileChooser 在解析 Uri 时记下的，取一次就清空）。
+        String sourceDir = FileChooser.takeSourceDir();
         if (pickMode == PICK_SINGLE) {
             if (!lower.endsWith(".py") && !lower.endsWith(".js")) {
                 Notify.show(R.string.config_bad_single);
@@ -710,7 +759,9 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
                 Notify.show(R.string.config_bad_json);
                 return;
             }
-            ConfigManager.add(ConfigManager.TAB_VOD, ConfigManager.KIND_JSON, new File(path).getName(), path);
+            ConfigManager.add(ConfigManager.TAB_VOD, ConfigManager.KIND_JSON, new File(path).getName(), path, sourceDir);
+            // 0.1.128：导入完立刻校验引用的 py/js/jar 在不在，缺了当场就说，别等切过去才报“爬虫加载失败”。
+            validateJsonRefs(path, sourceDir);
         } else {
             if (!lower.endsWith(".txt") && !lower.endsWith(".m3u") && !lower.endsWith(".m3u8")) {
                 Notify.show(R.string.config_bad_live);
@@ -719,6 +770,65 @@ public class ConfigFragment extends BaseFragment implements ConfigSubAdapter.OnC
             ConfigManager.add(ConfigManager.TAB_LIVE, ConfigManager.KIND_LIVE_FILE, new File(path).getName(), path);
         }
         refresh();
+    }
+
+    /**
+     * 0.1.128：导入 JSON 包后，校验它引用的 py/js/jar 在解析后的路径下存不存在。
+     * 解析基准和 VodConfig.initSite 同款：有源目录就按源目录，没有就按配置文件
+     * 自己的目录；配置文件是缓存复制的、又推不出源目录时，没法知道去哪找，跳过
+     * 校验（这时没给权限就只提示去开权限，靠 0.1.127 的首次安装提示兜）。只报
+     * 相对路径的本地引用（网址、csp_、JSON 文本原样不动）；缺失的只列前 3 个，
+     * 其余的计个数。没给权限时读不到也算缺失，提示里直接说先去开权限。
+     */
+    private void validateJsonRefs(String path, String sourceDir) {
+        File file = new File(path);
+        boolean cacheCopy = path.startsWith(FileChooser.getCacheDir().getAbsolutePath() + File.separator);
+        if (cacheCopy && TextUtils.isEmpty(sourceDir)) {
+            if (!PermissionUtil.hasAllFilesPermission()) Notify.show(R.string.config_refs_unknown);
+            return;
+        }
+        String parent = file.getParent();
+        String base = !TextUtils.isEmpty(sourceDir) ? "file://" + sourceDir + "/" : "file://" + (parent == null ? "" : parent) + "/";
+        String text = readTextCapped(file);
+        if (text == null) return;
+        JsonElement parsed;
+        try {
+            parsed = JsonParser.parseString(text);
+        } catch (Exception e) {
+            return;
+        }
+        if (!parsed.isJsonObject()) return;
+        JsonObject object = parsed.getAsJsonObject();
+        List<String> missing = new ArrayList<>();
+        collectMissingRef(object, "spider", base, missing);
+        JsonElement sites = object.get("sites");
+        if (sites != null && sites.isJsonArray()) {
+            for (JsonElement element : sites.getAsJsonArray()) {
+                if (!element.isJsonObject()) continue;
+                JsonObject site = element.getAsJsonObject();
+                collectMissingRef(site, "api", base, missing);
+                collectMissingRef(site, "ext", base, missing);
+                collectMissingRef(site, "jar", base, missing);
+            }
+        }
+        if (missing.isEmpty()) return;
+        List<String> names = new ArrayList<>();
+        for (String name : missing) if (!names.contains(name)) names.add(name);
+        String shown = TextUtils.join("、", names.subList(0, Math.min(3, names.size())));
+        if (!PermissionUtil.hasAllFilesPermission()) Notify.show(getString(R.string.config_refs_no_perm, names.size(), shown));
+        else Notify.show(getString(R.string.config_refs_missing, names.size(), shown));
+    }
+
+    /** 0.1.128：一个相对路径的本地引用解析后文件在不在；不是本地相对路径（网址、csp_、JSON 文本）跳过。 */
+    private void collectMissingRef(JsonObject object, String key, String base, List<String> missing) {
+        JsonElement value = object.get(key);
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) return;
+        String ref = value.getAsString();
+        if (TextUtils.isEmpty(ref)) return;
+        String resolved = UrlUtil.resolveRelative(base, ref);
+        if (resolved.equals(ref) || !resolved.startsWith("file://")) return;
+        String checked = UrlUtil.resolveEncodedFile(resolved);
+        if (!new File(checked.substring("file://".length())).exists()) missing.add(ref);
     }
 
     /** 点一行切换接口（原来是拨开关，现在按设计图改成点行）：已经是当前用的就什么都不做。 */

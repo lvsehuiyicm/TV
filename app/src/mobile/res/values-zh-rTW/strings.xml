@@ -138,6 +138,9 @@
     <string name="config_need_link">連結不能為空</string>
     <string name="config_bad_single">請選擇 .py 或 .js 文件</string>
     <string name="config_bad_json">請選擇 .json 文件</string>
+    <string name="config_refs_no_perm">引用的 %1$d 個檔案讀不到（%2$s）：先開「所有檔案存取權限」，再刪掉重新匯入</string>
+    <string name="config_refs_missing">這個包缺 %1$d 個檔案：%2$s</string>
+    <string name="config_refs_unknown">這個包是複製匯入的，引用的檔案可能找不到：先開「所有檔案存取權限」，再刪掉重新匯入</string>
     <string name="config_bad_live">請選擇 .txt 或 .m3u 文件</string>
     <string name="config_folder_exists">該文件夾已添加</string>
     <string name="config_file_exists">該文件已添加</string>
@@ -183,4 +186,8 @@
     <string name="file_perm_title">所有檔案存取權限</string>
     <string name="file_perm_message">燭龍需要「所有檔案存取權限」才能讀到本地的源（py/js/json 本地包）。沒開的話，本地匯入的介面可能打不開、爬蟲載入失敗。點「去設定」，到權限頁點允許就行。</string>
     <string name="file_perm_settings">去設定</string>
+    <string name="storage_perm_title">需要儲存權限</string>
+    <string name="storage_perm_message">讀取本地配置包需要存取手機儲存空間。配置裡引用的 spider.jar、.py 等檔案會按同目錄讀取，請把整個包放在同一個資料夾。</string>
+    <string name="storage_perm_settings">去授權</string>
+    <string name="storage_perm_granted">已獲得儲存權限</string>
 </resources>

@@ -55,6 +55,8 @@ public class ConfigManager {
         public String kind;
         public String name;
         public String link;
+        /** 0.1.128：这个订阅原来在手机上的文件夹（文件导入时从挑文件的 Uri 反推的，见 FileChooser.getSourceDir）。配置是缓存复制的（导入时没权限，wo.json 被拷到 app 缓存）时，相对路径按它解析；平时不用。老订阅没有这个字段，Gson 读出来是 null。 */
+        public String sourceDir;
         public boolean enabled;
 
         public boolean isFolder() {
@@ -120,7 +122,19 @@ public class ConfigManager {
         return null;
     }
 
+    /** 0.1.128：按配置地址找订阅（VodConfig.initSite 用它找缓存复制的那个订阅，取它的源目录当相对路径解析基准）。 */
+    public static Sub findSubByUrl(String url) {
+        if (url == null) return null;
+        for (Sub sub : getAll()) if (url.equals(sub.getConfigUrl())) return sub;
+        return null;
+    }
+
     public static Sub add(int tab, String kind, String name, String link) {
+        return add(tab, kind, name, link, null);
+    }
+
+    /** 0.1.128：sourceDir 是这个订阅原来在手机上的文件夹（文件导入、且能从挑文件的 Uri 反推出来时才有值）；相对路径解析和导入校验用它，其他订阅传 null。 */
+    public static Sub add(int tab, String kind, String name, String link, String sourceDir) {
         List<Sub> subs = getAll();
         Sub sub = new Sub();
         sub.id = UUID.randomUUID().toString();
@@ -128,6 +142,7 @@ public class ConfigManager {
         sub.kind = kind;
         sub.name = name;
         sub.link = link;
+        sub.sourceDir = sourceDir;
         sub.enabled = true;
         subs.add(sub);
         save(subs);

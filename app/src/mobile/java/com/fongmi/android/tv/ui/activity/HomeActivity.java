@@ -12,8 +12,11 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
+import androidx.core.graphics.Insets;
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.viewbinding.ViewBinding;
 
@@ -111,6 +114,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         if (savedInstanceState == null || !savedInstanceState.getBoolean(STATE_ACTION_HANDLED)) pendingAction = getIntent();
         orientation = getResources().getConfiguration().orientation;
         mBinding.navigation.setOnItemSelectedListener(this);
+        setWindowInsets();
         initFragment(savedInstanceState);
         // 0.1.123：启动时不再自动检查应用版本、不弹升级提示；只保留一次性的运行模块更新检查。
         Updater.get().checkModulesOnce();
@@ -160,13 +164,35 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         };
     }
 
+    /**
+     * 0.1.128：底部导航自适应屏幕。原来只靠根布局 fitsSystemWindows 吃系统 insets，
+     * 有的手机（手势导航、或 ROM 的 insets 分发不一样）底栏拿不到导航条高度，底部
+     * 导航就贴着屏幕底边走，标签被手势条盖住一半；固定 48dp 高时字体放大的手机
+     * 标签也会被截。现在显式按 systemBars insets 给根布局留安全区（上下左右都算，
+     * 和 fitsSystemWindows 同款效果，只是走代码、不靠它分发），导航条高度跟着系统
+     * 导航条走；布局里 fitsSystemWindows 已去掉，免得两处重复算。
+     */
+    private void setWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(mBinding.getRoot(), (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return insets;
+        });
+    }
+
     private void checkPermission() {
+        // 0.1.128：首次安装权限提示改到这里——第一次打开一定走到，不再挂在本地网络
+        // 权限的回调里（见 onNetworkPermissionResult 注释）。只弹一次、已有权限不弹、
+        // 打不开设置页不弹，条件和 0.1.127 一样，只换了触发点。
+        maybeShowFilePermissionPrompt();
         PermissionUtil.requestLocalNetwork(this, this::onNetworkPermissionResult);
     }
 
     private void onNetworkPermissionResult(boolean allGranted) {
+        // 0.1.128：首次安装权限提示不在这里调了——SDK 37+ 的手机上这个回调要等用户
+        // 答完本地网络权限的系统弹窗才到，提示挂在这里会被拖住（弹窗没答完就不弹）；
+        // 改在 checkPermission 里调，第一次打开一定走到。
         PermissionUtil.requestNotify(this);
-        maybeShowFilePermissionPrompt();
         initConfig();
     }
 

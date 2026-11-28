@@ -39,6 +39,7 @@ import androidx.media3.common.VideoSize;
 import androidx.media3.ui.AspectRatioFrameLayout;
 import androidx.media3.ui.PlayerSeekView;
 import androidx.media3.ui.PlayerView;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.transition.ChangeBounds;
 import androidx.transition.TransitionManager;
@@ -87,6 +88,7 @@ import com.fongmi.android.tv.setting.PlayerButtonsSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.SpeedSetting;
 import com.fongmi.android.tv.ui.adapter.EpisodeAdapter;
+import com.fongmi.android.tv.ui.adapter.EpisodeRangeAdapter;
 import com.fongmi.android.tv.ui.adapter.FlagAdapter;
 import com.fongmi.android.tv.ui.adapter.QualityAdapter;
 import com.fongmi.android.tv.ui.adapter.QuickAdapter;
@@ -125,6 +127,7 @@ import com.github.catvod.utils.UriUtil;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -138,6 +141,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     private VodPlaybackController mVod;
     private FlagAdapter mFlagAdapter;
     private EpisodeAdapter mEpisodeAdapter;
+    private EpisodeRangeAdapter mRangeAdapter;
     private QualityAdapter mQualityAdapter;
     private QuickAdapter mQuickAdapter;
     private ViewGroup.LayoutParams mFrameParams;
@@ -157,6 +161,12 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     private long mBufferAheadMs = -1;
     private long mBufferSampleMs = 0;
     private History mHistory;
+    /** 0.1.128：详情页选集全量表（集数格子里只放当前范围的一组，对话框和上下集还用全量）。 */
+    private List<Episode> mEpisodes = new ArrayList<>();
+    /** 0.1.128：范围 chips 一组 40 集（1-40、41-80……），和 EpisodeGridDialog 的页大小同款。 */
+    private static final int EPISODE_RANGE = 40;
+    /** 0.1.128：当前显示的是第几组范围（-1 = 还没定）。 */
+    private int mEpisodeRange = -1;
     private boolean fullscreen;
     private boolean webFullscreen;
     private boolean externalPlaybackCompleted;
@@ -584,10 +594,16 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
         mBinding.flag.addItemDecoration(new SpaceItemDecoration(8));
         mBinding.flag.setAdapter(mFlagAdapter = new FlagAdapter(this));
         mBinding.quick.setAdapter(mQuickAdapter = new QuickAdapter(this));
-        mBinding.episode.setHasFixedSize(true);
+        // 0.1.128：选集从横向一条改成 4 列网格（布局里已是 GridLayoutManager span 4，
+        // 下面是范围 chips）。格子本身带 6dp 边距，横向那条 8dp 间隔不要了；高度随组
+        // 内集数变（1 集 1 行、40 集 10 行），hasFixedSize 必须关，不然换组后高度不变。
+        mBinding.episode.setHasFixedSize(false);
         mBinding.episode.setItemAnimator(null);
-        mBinding.episode.addItemDecoration(new SpaceItemDecoration(8));
-        mBinding.episode.setAdapter(mEpisodeAdapter = new EpisodeAdapter(this, ViewType.HORI));
+        mBinding.episode.setAdapter(mEpisodeAdapter = new EpisodeAdapter(this, ViewType.GRID));
+        mBinding.episodeRange.setHasFixedSize(true);
+        mBinding.episodeRange.setItemAnimator(null);
+        mBinding.episodeRange.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        mBinding.episodeRange.setAdapter(mRangeAdapter = new EpisodeRangeAdapter(this::showEpisodeRange));
         mBinding.quality.setHasFixedSize(true);
         mBinding.quality.setItemAnimator(null);
         mBinding.quality.addItemDecoration(new SpaceItemDecoration(8));
@@ -913,6 +929,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
 
     @Override
     public void renderEpisodeSelection(Episode item) {
+        showEpisodeRangeFor(item);
         notifyItemChanged(mBinding.episode, mEpisodeAdapter);
         scrollToPosition(mBinding.episode, mEpisodeAdapter.getPosition());
     }
@@ -1110,7 +1127,59 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
         mBinding.reverse.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
         mBinding.episode.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         mBinding.more.setVisibility(items.size() < 10 ? View.GONE : View.VISIBLE);
-        mEpisodeAdapter.addAll(items);
+        // 0.1.128：全量表留着（对话框和上下集用它），格子里只放当前范围的一组；
+        // 范围 chips 按当前集所在组选中，集数少就只有一组。拷一份，免得调用方
+        // 之后改那个表把这里的全量表也改了（原来 adapter.addAll 也是拷一份）。
+        mEpisodes = items == null ? new ArrayList<>() : new ArrayList<>(items);
+        int group = getSelectedRange();
+        setEpisodeRanges(group);
+        showEpisodeRange(group);
+    }
+
+    /** 0.1.128：当前集在第几组范围里（没选中的集时回第 0 组）。 */
+    private int getSelectedRange() {
+        for (int i = 0; i < mEpisodes.size(); i++) if (mEpisodes.get(i).isSelected()) return i / EPISODE_RANGE;
+        return 0;
+    }
+
+    /** 0.1.128：按 40 集一组拼范围 chips（1-40、41-80……；最后一组只剩 1 集就只写那集，如 201）。倒序时按 EpisodeGridDialog 同款标成倒着的（201-162）。 */
+    private void setEpisodeRanges(int selected) {
+        List<String> labels = new ArrayList<>();
+        boolean reverse = mHistory != null && mHistory.isRevSort();
+        for (int start = 0; start < mEpisodes.size(); start += EPISODE_RANGE) {
+            labels.add(rangeLabel(start, Math.min(start + EPISODE_RANGE, mEpisodes.size()), reverse));
+        }
+        mBinding.episodeRange.setVisibility(labels.isEmpty() ? View.GONE : View.VISIBLE);
+        mRangeAdapter.setItems(labels, selected);
+    }
+
+    private String rangeLabel(int start, int end, boolean reverse) {
+        int first = reverse ? mEpisodes.size() - start : start + 1;
+        int last = reverse ? mEpisodes.size() - end + 1 : end;
+        return first == last ? String.valueOf(first) : first + "-" + last;
+    }
+
+    /** 0.1.128：点范围 chip 只显示那一组的集数；点集数照常播放（走 EpisodeAdapter 原来的点击）。 */
+    private void showEpisodeRange(int group) {
+        if (mEpisodes.isEmpty()) {
+            // 没集数时把格子清干净（别留着上一个剧的集数，虽然这时格子本身是 GONE 的）。
+            mEpisodeAdapter.addAll(new ArrayList<>());
+            return;
+        }
+        int groups = (mEpisodes.size() + EPISODE_RANGE - 1) / EPISODE_RANGE;
+        group = Math.max(0, Math.min(group, groups - 1));
+        mEpisodeRange = group;
+        mRangeAdapter.setSelected(group);
+        int start = group * EPISODE_RANGE;
+        int end = Math.min(start + EPISODE_RANGE, mEpisodes.size());
+        mEpisodeAdapter.addAll(mEpisodes.subList(start, end));
+    }
+
+    /** 0.1.128：当前集换组时（比如从 40 切到 41），先把范围 chip 切到那一组再刷新；还在同一组里就不动。 */
+    private void showEpisodeRangeFor(Episode item) {
+        if (mEpisodes.isEmpty() || item == null) return;
+        int index = mEpisodes.indexOf(item);
+        if (index >= 0 && index / EPISODE_RANGE != mEpisodeRange) showEpisodeRange(index / EPISODE_RANGE);
     }
 
     private void setQualityVisible(boolean visible) {
@@ -1125,7 +1194,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     }
 
     private void onMore() {
-        EpisodeGridDialog.create().reverse(mHistory.isRevSort()).episodes(mEpisodeAdapter.getItems()).show(this);
+        EpisodeGridDialog.create().reverse(mHistory.isRevSort()).episodes(mEpisodes).show(this);
     }
 
     private void onActor() {
@@ -1349,7 +1418,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     }
 
     private void onEpisodes() {
-        EpisodeListDialog.create().episodes(mEpisodeAdapter.getItems()).show(this);
+        EpisodeListDialog.create().episodes(mEpisodes).show(this);
     }
 
     private void onPlayer() {
@@ -2071,13 +2140,14 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
 
     @Override
     public void onFlingUp() {
-        if (mEpisodeAdapter.getItemCount() == 1) onRefresh();
+        // 0.1.128：按全量集数判（格子里现在只有当前组的一组，最后一组只剩 1 集时也不能当成只有 1 集）。
+        if (mEpisodes.size() == 1) onRefresh();
         else mVod.nextEpisode(true);
     }
 
     @Override
     public void onFlingDown() {
-        if (mEpisodeAdapter.getItemCount() == 1) onRefresh();
+        if (mEpisodes.size() == 1) onRefresh();
         else mVod.prevEpisode(true);
     }
 

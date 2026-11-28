@@ -16,6 +16,7 @@ import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.utils.ConfigJsonCache;
 import com.fongmi.android.tv.utils.ConfigManager;
+import com.fongmi.android.tv.utils.FileChooser;
 import com.fongmi.android.tv.utils.ParseStore;
 import com.fongmi.android.tv.utils.ScriptManager;
 import com.fongmi.android.tv.utils.SiteOrder;
@@ -382,18 +383,19 @@ public class VodConfig extends BaseConfig {
     }
 
     private void initSite(Config config, JsonObject object, Staged staged) {
-        String spider = UrlUtil.resolveEncodedFile(UrlUtil.resolveRelative(config.getUrl(), Json.safeString(object, "spider")));
+        String base = getResolveBase(config);
+        String spider = UrlUtil.resolveEncodedFile(UrlUtil.resolveRelative(base, Json.safeString(object, "spider")));
         BaseLoader.get().parseJar(spider, true);
         List<Site> sites = Json.safeListElement(object, "sites").stream().map(e -> Site.objectFrom(e, spider)).distinct().collect(Collectors.toCollection(ArrayList::new));
         for (Site site : sites) {
-            site.setApi(UrlUtil.resolveEncodedFile(UrlUtil.resolveRelative(config.getUrl(), site.getApi())));
-            site.setExt(UrlUtil.resolveEncodedFile(UrlUtil.resolveRelative(config.getUrl(), site.getExt())));
+            site.setApi(UrlUtil.resolveEncodedFile(UrlUtil.resolveRelative(base, site.getApi())));
+            site.setExt(UrlUtil.resolveEncodedFile(UrlUtil.resolveRelative(base, site.getExt())));
             // 0.1.110 A.1：站点 jar 也要相对配置地址解析（与 api/ext 同法）。
             // 原来只解析 api/ext，jar 字段从未解析，相对路径（./jar/xbpq.jar 等）
             // 原样进了 JarLoader，isLocalFile 永远 false，报“不支持的 JAR 位置”，
             // loader 留空 → 点站即“爬虫加载失败”。解析成 file:// 后自然走进
             // JarLoader 已有的 file 分支（copyLocalJar），加载逻辑本身不动。
-            site.setJar(UrlUtil.resolveEncodedFile(UrlUtil.resolveRelative(config.getUrl(), site.getJar())));
+            site.setJar(UrlUtil.resolveEncodedFile(UrlUtil.resolveRelative(base, site.getJar())));
         }
         Set<String> keys = sites.stream().map(Site::getKey).collect(Collectors.toSet());
         ScriptManager.get().scan().stream().filter(site -> keys.add(site.getKey())).forEach(site -> sites.add(site));
@@ -403,6 +405,22 @@ public class VodConfig extends BaseConfig {
         sites.forEach(site -> site.sync(items.get(site.getKey())));
         staged.sites = sites;
         staged.home = selectHomeSite(config, sites, staged);
+    }
+
+    /**
+     * 0.1.128：相对路径的解析基准。平时就是配置自己的地址；配置是缓存复制的
+     * （导入时没权限、SAF 解析不到真实路径，wo.json 被拷到 app 缓存），且订阅
+     * 上记着源目录时，改按源目录解析——缓存目录里没有 py/js/jar，按它解析
+     * 全是 404，首页源就一直“爬虫加载失败”。源目录是导入时从挑文件的 Uri
+     * 的 docId 里反推的（FileChooser.getSourceDir）；没记着、或不是缓存复制
+     * 的配置时，走原来的路，一点不动。
+     */
+    private String getResolveBase(Config config) {
+        ConfigManager.Sub sub = ConfigManager.findSubByUrl(config.getUrl());
+        if (sub == null || TextUtils.isEmpty(sub.sourceDir)) return config.getUrl();
+        String cache = FileChooser.getCacheDir().getAbsolutePath();
+        if (!config.getUrl().startsWith("file://" + cache + "/")) return config.getUrl();
+        return "file://" + sub.sourceDir + "/";
     }
 
     /**
