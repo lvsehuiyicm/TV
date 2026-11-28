@@ -7,30 +7,44 @@
         android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-    <!-- 0.1.134：内容不再 layout_above 导航栏，容器改为全高，药丸悬浮在内容之上，
-         药丸下面 16dp 的底边距就能露出来一点海报（对着参考图：他家药丸底边到屏幕底
-         约 14–26dp，烛龙 16dp 在这个区间里）。首页 sections 的 paddingBottom 同步
-         加到 88dp（见 fragment_vod.xml），最后一行海报才能完全滚到药丸上面。
-         itemPaddingTop 4dp → 10dp：0.1.133 实测药丸里图标+汉字整体偏上约 11–13px
-         （内容中心比药丸中心高约 6dp），顶部多 6dp 就把内容推到正中间。
-         仍是 wrap_content，不用固定死高度（0.1.132 的 46dp 教训），汉字不裁。 -->
+    <!-- 0.1.135：底部药丸按 xu 新参考图（1000247835_86_0f1k.jpg，930x2048）重做，
+         仍只留 首页/直播/我的 3 个菜单。
+         参考图实测（约 2.2 图像 px = 1dp）：药丸 x 85–845（宽 760px，占屏宽 81.7%，
+         边距各约 85px ≈ 39dp）、y 1843–1970（高约 127px ≈ 58dp）、底边距约 78px ≈ 35dp；
+         图标约 44–53x38–48px（≈20dp）、汉字约 48–51x22–24px（≈11sp）、图标-汉字间距约 22px（≈10dp）。
+         本版落点：边距 16dp → 39dp、底边距 16dp → 35dp、图标 18dp → 20dp、
+         汉字接上已有的 TextAppearance.Zhulong.NavLabel（11sp，以前只定义了没接线）、
+         图标-汉字间距用 app:activeIndicatorLabelPadding="2dp" 收紧（MDC 1.14 有这个属性，
+         控制图标容器与汉字之间的距离；2dp 间距 + 汉字上沿字体留白，目视约 4–5dp，
+         比参考图的约 10dp 更近，按 xu“图标和字距离挨得再近些”的要求）。
+         高度：图标字挨近后药丸再矮些——仍是 wrap_content，不定死高度（0.1.132 的 46dp 教训）；
+         itemPaddingTop 10dp → 8dp、itemPaddingBottom 0dp → 7dp，内容高约 8+20+2+14+7 ≈ 51dp
+         （参考图约 58dp，省下的约 5dp 是图标-汉字间距收紧出来的），上下留白 8dp/7dp 基本居中。
+         选中态：图标和汉字都变琥珀色（selector_nav 已是选中 colorPrimary、未选中 colorOnSurface，
+         两处都接它，不用改）；图标后面的小药丸底色关掉——0.1.134 之前那个琥珀底色块就是
+         active indicator（shape_nav_indicator，纯 colorPrimary），琥珀图标叠在琥珀底色上根本看不清。
+         MDC 1.14 没有 app:itemActiveIndicatorEnabled 这个 XML 属性（只有 Java 方法），
+         所以在 HomeActivity.initView() 里调 mBinding.navigation.setItemActiveIndicatorEnabled(false)，
+         layout 里的 app:itemActiveIndicatorStyle 也一并去掉。 -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/navigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginStart="39dp"
+        android:layout_marginEnd="39dp"
+        android:layout_marginBottom="35dp"
         android:background="@drawable/shape_nav_pill"
         android:minHeight="44dp"
         app:elevation="8dp"
-        app:itemActiveIndicatorStyle="@style/Widget.Zhulong.NavActiveIndicator"
-        app:itemIconSize="18dp"
+        app:itemIconSize="20dp"
         app:itemIconTint="@color/selector_nav"
         app:itemTextColor="@color/selector_nav"
-        app:itemPaddingBottom="0dp"
-        app:itemPaddingTop="10dp"
+        app:itemTextAppearanceActive="@style/TextAppearance.Zhulong.NavLabel"
+        app:itemTextAppearanceInactive="@style/TextAppearance.Zhulong.NavLabel"
+        app:activeIndicatorLabelPadding="2dp"
+        app:itemPaddingBottom="7dp"
+        app:itemPaddingTop="8dp"
         app:labelVisibilityMode="labeled"
         app:menu="@menu/menu_nav"/>
 </RelativeLayout>

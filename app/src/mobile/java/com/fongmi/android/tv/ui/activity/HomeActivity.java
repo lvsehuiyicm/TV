@@ -112,6 +112,12 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         if (savedInstanceState == null || !savedInstanceState.getBoolean(STATE_ACTION_HANDLED)) pendingAction = getIntent();
         orientation = getResources().getConfiguration().orientation;
         mBinding.navigation.setOnItemSelectedListener(this);
+        // 0.1.135：关掉选中项图标后面的小药丸底色（active indicator）。0.1.134 之前那个底色块是
+        // 纯琥珀色 shape_nav_indicator，琥珀图标叠在琥珀底色上根本看不清选中态；关掉后选中只变
+        // 琥珀色（图标+汉字都靠 selector_nav 变色），不再套底色块。MDC 1.14 没有
+        // app:itemActiveIndicatorEnabled 这个 XML 属性（只有这个 Java 方法），所以在这里调；
+        // layout 里的 app:itemActiveIndicatorStyle 也一并去掉了。
+        mBinding.navigation.setItemActiveIndicatorEnabled(false);
         setWindowInsets();
         initFragment(savedInstanceState);
         // 0.1.123：启动时不再自动检查应用版本、不弹升级提示；只保留一次性的运行模块更新检查。
