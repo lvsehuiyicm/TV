@@ -122,7 +122,12 @@ public class SiteViewModel extends ViewModel {
         }
         FluentFuture<Result> future = FluentFuture.from(Task.submit(() -> {
             Result fresh = SiteApi.homeContent(home);
-            if (fresh != null) {
+            // 0.1.133：只有带视频列表的结果才进缓存。“有分类没视频”的空结果不缓存——
+            // 它不是可显示的内容，缓存它会毒化 hasHomeCache：之后真出错也只弹一句“显示
+            // 上次的内容”、不走 handleError（0.1.132 可见报错被吞的另一条路），冷启动
+            // 还会一直贴着这份空结果。空结果照常 post 给界面（分类 chips 正常显示），
+            // 只是不进内存/磁盘缓存，下次一定重新拉。
+            if (fresh != null && !fresh.getList().isEmpty()) {
                 homeCache.put(key, fresh);
                 // 0.1.127：拉新的成功也写一份到磁盘，下次冷启动先显示它。
                 HomeResultCache.put(key, fresh);
@@ -134,7 +139,15 @@ public class SiteViewModel extends ViewModel {
         }
         future.addCallback(Task.callback(fresh -> {
             removeHomeFuture(future);
-            if (epoch == homeEpoch.get() && isCurrentHome(home)) result.postValue(fresh);
+            if (epoch == homeEpoch.get() && isCurrentHome(home)) {
+                // 0.1.133：分类回来了、视频列表却是空的——这就是 4K咕噜在 0.1.131/0.1.132
+                // 上的症状（chips 都在、内容空、无报错、无文件）。这不是抛错，是爬虫正常
+                // 返回了空列表，所以 handleError 永远走不到。空列表不当成错来报（不 toast、
+                // 不进错误分支），但要留一份诊断文件（load-empty-*.txt，和 load-error 同
+                // 目录），不然下次还是定不准是哪一步空了。
+                if (fresh != null && !fresh.getTypes().isEmpty() && fresh.getList().isEmpty()) logEmptyHome(home, fresh);
+                result.postValue(fresh);
+            }
         }, error -> {
             removeHomeFuture(future);
             if (error instanceof CancellationException) return;
@@ -143,7 +156,16 @@ public class SiteViewModel extends ViewModel {
                 // 留着缓存内容，只 toast 一句；只有内存和磁盘都没有当前源缓存时，
                 // 才按原来那样 post error/empty。判断以当前首页源的 key 为准，不拿错源的缓存顶。
                 if (hasHomeCache(key)) {
-                    App.post(() -> Notify.show(ResUtil.getString(R.string.error_home_keep_cache)));
+                    // 0.1.133：有缓存时也写诊断文件并带上错误详情——0.1.132 的可见报错在这里
+                    // 会被吞掉：缓存里可能是一份“有分类没视频”的空结果（0.1.127–0.1.132 会把
+                    // 它当成功缓存），之后真出错也只弹一句“显示上次的内容”，不写文件、不说错
+                    // 在哪。缓存内容照常留着显示，但失败本身要可见、可查。
+                    logErrorFile("load-error", error);
+                    String detail = error.getClass().getSimpleName();
+                    if (error.getMessage() != null && !error.getMessage().isEmpty()) detail += ": " + error.getMessage();
+                    if (detail.length() > 100) detail = detail.substring(0, 100) + "…";
+                    final String toast = ResUtil.getString(R.string.error_home_keep_cache) + "：" + detail;
+                    App.post(() -> Notify.show(toast));
                     error.printStackTrace();
                 } else {
                     handleError(TaskType.RESULT, result, error);
@@ -292,6 +314,34 @@ public class SiteViewModel extends ViewModel {
         } catch (Exception e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    // 0.1.133：首页“有分类没视频”的诊断文件。爬虫正常返回空列表时没有任何异常，
+    // handleError 走不到、toast 和 load-error 都不会有；只留这份文件，记下当时
+    // 是哪个源、回了几个分类、视频列表是不是空、结果的原始 JSON，xu 发我就能定准。
+    // 不 toast——空列表本身不是错（有的源首页本来就没视频），只留痕。
+    private static void logEmptyHome(Site home, Result fresh) {
+        try {
+            File dir = App.get().getExternalFilesDir(null);
+            if (dir == null) return;
+            String stamp = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(new Date());
+            File file = new File(dir, "load-empty-" + stamp + ".txt");
+            StringBuilder sb = new StringBuilder();
+            sb.append("time: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n");
+            sb.append("site: ").append(home == null ? "" : home.getKey()).append(" / ").append(home == null ? "" : home.getName()).append("\n");
+            sb.append("activeId: ").append(ConfigManager.getActiveId()).append("\n");
+            sb.append("types: ").append(fresh.getTypes().size());
+            for (com.fongmi.android.tv.bean.Class type : fresh.getTypes()) sb.append(" [").append(type.getTypeId()).append(":").append(type.getTypeName()).append("]");
+            sb.append("\n");
+            sb.append("list: ").append(fresh.getList().size()).append("\n");
+            sb.append("note: homeContent returned categories but an empty video list (no exception thrown)\n");
+            sb.append("result: ").append(fresh.toString()).append("\n");
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                out.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

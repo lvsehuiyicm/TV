@@ -27,7 +27,11 @@ public class HomeResultCache {
 
     private static final ConcurrentHashMap<String, Result> MEMORY = new ConcurrentHashMap<>();
 
-    /** 取上次的首页结果：内存没有就读磁盘；读不到、解析失败、或结果是空的返回 null。 */
+    /** 取上次的首页结果：内存没有就读磁盘；读不到、解析失败、或结果是空的返回 null。
+     * 0.1.133：空的标准收紧——视频列表为空就算空（只剩分类不算内容）。0.1.127–0.1.132
+     * 会把“有分类没视频”的空结果当成功缓存写进磁盘，之后真出错也只弹一句“显示上次的
+     * 内容”、不走可见报错，冷启动还一直贴着这份空结果。收紧后，旧版本写下的这类空
+     * 文件也会被当成无缓存，下次拉新失败一定走可见报错。 */
     public static Result get(String key) {
         if (TextUtils.isEmpty(key)) return null;
         Result cached = MEMORY.get(key);
@@ -45,7 +49,7 @@ public class HomeResultCache {
             String json = new String(bytes, 0, read, StandardCharsets.UTF_8);
             if (TextUtils.isEmpty(json)) return null;
             Result result = Result.objectFrom(json);
-            if (result == null || (result.getTypes().isEmpty() && result.getList().isEmpty())) return null;
+            if (result == null || result.getList().isEmpty()) return null;
             MEMORY.put(key, result);
             return result;
         } catch (Exception e) {
