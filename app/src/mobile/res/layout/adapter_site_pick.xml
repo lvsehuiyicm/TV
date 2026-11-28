@@ -45,13 +45,16 @@
 
     </LinearLayout>
 
+    <!-- 0.1.131：tag 字色从 live_selected（#F1BB6C 琥珀）改成黑色。选中行背景就是
+         #F1BB6C，琥珀字写在琥珀底上完全看不见（这就是双排首格里 tag 占了约 56dp 宽度
+         却看不到“当前使用”四个字的原因）；黑色字在琥珀底上才看得清。 -->
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:text="@string/site_current"
-        android:textColor="@color/live_selected"
+        android:textColor="@color/black"
         android:textSize="12sp"
         android:textStyle="bold"
         android:visibility="gone" />

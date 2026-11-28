@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.text.TextUtils;
 
 import com.fongmi.android.tv.server.Server;
+import com.github.catvod.Proxy;
 import com.github.catvod.utils.Path;
 import com.github.catvod.utils.UriUtil;
 import com.google.common.net.HttpHeaders;
@@ -38,7 +39,17 @@ public class UrlUtil {
         return switch (scheme) {
             case "assets" -> url.replace(prefix, Server.get().getAddress("/"));
             case "proxy" -> url.replace(prefix, Server.get().getAddress("/proxy?"));
-            case "file" -> Server.get().getAddress("/file/") + Uri.encode(url.substring((prefix).length()), "/");
+            // 0.1.131：本地服务器还没起（端口还是 -1）时，别把 file:// 转成
+            // http://127.0.0.1:-1/file/…——OkHttp 认不出 -1 端口，Request.Builder.url()
+            // 直接抛 IllegalArgumentException，Net.Result.failure 把它写成
+            // "Invalid request options"，py 爬虫加载失败（spider-error 18:05 两份）。
+            // 根因是时序：切本地接口走 ConfigManager.activateLocal，不调 VodConfig.load、
+            // 也不起服务器（Server.start 只在 BaseConfig.loadConfig/ensureLoaded 里调），
+            // 所以直接进本地接口（影视py）时 Proxy 端口一直是 -1，file:// 转出来的地址
+            // 从一开始就是坏的；先开在线接口再切本地能用，正是因为在线加载先把服务器起了。
+            // 服务器没起时就留着 file://，Python read_source 本来就能直接读 file:// 文件
+            // （0.1.77 共存要求：本地文件直接读盘、不走 localhost HTTP）。
+            case "file" -> Proxy.getPort() <= 0 ? url : Server.get().getAddress("/file/") + Uri.encode(url.substring((prefix).length()), "/");
             default -> url;
         };
     }

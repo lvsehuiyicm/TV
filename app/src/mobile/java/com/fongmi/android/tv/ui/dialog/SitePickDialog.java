@@ -50,6 +50,9 @@ public class SitePickDialog extends BaseAlertDialog implements SiteListener, Sit
     protected void initView() {
         adapter = new SitePickAdapter(SiteAdapter.buildList(), VodConfig.get().getHome().getKey());
         grid = Prefers.getBoolean(KEY_SITE_PICK_GRID, false);
+        // 0.1.131：把双排/单排告诉 adapter，双排时首页格不显示“当前使用”tag，
+        // 不然 tag + 勾占掉约 84dp，名字只剩 20~40dp，只能显示成“...”。
+        adapter.setGrid(grid);
         setLayoutManager();
         binding.recycler.setAdapter(adapter);
         binding.recycler.setItemAnimator(null);
@@ -84,6 +87,8 @@ public class SitePickDialog extends BaseAlertDialog implements SiteListener, Sit
     private void setLayoutManager() {
         binding.recycler.setLayoutManager(grid ? new GridLayoutManager(requireContext(), 2) : new LinearLayoutManager(requireContext()));
         binding.toggle.setImageResource(grid ? R.drawable.ic_view_list : R.drawable.ic_view_grid);
+        // 0.1.131：换排时同步告诉 adapter（双排藏 tag），setGrid 内部会重绑。
+        if (adapter != null) adapter.setGrid(grid);
         binding.recycler.requestLayout();
     }
 

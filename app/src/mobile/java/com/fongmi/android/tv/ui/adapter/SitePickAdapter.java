@@ -32,6 +32,10 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
     private String keyword = "";
     private String homeKey;
     private String pendingKey;
+    // 0.1.131：是不是双排网格。双排时每格只有约一半宽，首页格还要同时显示“当前使用”
+    // tag（约 56dp）和勾（28dp），名字/副行只剩 20~40dp，只能显示成“...”。
+    // 双排下 tag 不显示——琥珀底 + 勾已经说明这是当前源，tag 是多余的；单排宽度够，留着。
+    private boolean grid;
 
     public SitePickAdapter(List<Site> items, String homeKey) {
         this.items = items;
@@ -44,6 +48,13 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
         if (pendingKey == null) return null;
         for (Site site : items) if (pendingKey.equals(site.getKey())) return site;
         return null;
+    }
+
+    /** 0.1.131：切双排/单排时由 SitePickDialog 调，改完重绑一次（tag 显隐跟着变）。 */
+    public void setGrid(boolean grid) {
+        if (this.grid == grid) return;
+        this.grid = grid;
+        notifyDataSetChanged();
     }
 
     public interface OnItemLongClickListener {
@@ -127,7 +138,9 @@ public class SitePickAdapter extends RecyclerView.Adapter<SitePickAdapter.ViewHo
         holder.binding.getRoot().setSelected(home);
         holder.binding.name.setSelected(home);
         holder.binding.sub.setSelected(home);
-        holder.binding.tag.setVisibility(home ? View.VISIBLE : View.GONE);
+        // 0.1.131：双排时不显示“当前使用”tag（见 grid 字段注释），把宽度让给名字；
+        // 单排宽度够，首页行照常显示。
+        holder.binding.tag.setVisibility(home && !grid ? View.VISIBLE : View.GONE);
         holder.binding.check.setVisibility(pending ? View.VISIBLE : View.GONE);
         if (pending) {
             int color = ContextCompat.getColor(holder.itemView.getContext(), home ? R.color.black : R.color.live_selected);
