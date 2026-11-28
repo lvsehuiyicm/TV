@@ -141,6 +141,7 @@
     <string name="config_refs_no_perm">引用的 %1$d 個檔案讀不到（%2$s）：先開「所有檔案存取權限」，再刪掉重新匯入</string>
     <string name="config_refs_missing">這個包缺 %1$d 個檔案：%2$s</string>
     <string name="config_refs_unknown">這個包是複製匯入的，引用的檔案可能找不到：先開「所有檔案存取權限」，再刪掉重新匯入</string>
+    <string name="error_home_keep_cache">載入失敗，顯示的是上次的內容</string>
     <string name="config_bad_live">請選擇 .txt 或 .m3u 文件</string>
     <string name="config_folder_exists">該文件夾已添加</string>
     <string name="config_file_exists">該文件已添加</string>

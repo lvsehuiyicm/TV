@@ -26,7 +26,6 @@ import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
-import com.fongmi.android.tv.api.loader.BaseLoader;
 import com.fongmi.android.tv.api.node.NodeRuntime;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.databinding.ActivityHomeBinding;
@@ -55,7 +54,6 @@ import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Prefers;
-import com.github.catvod.utils.Task;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationBarView;
 
@@ -214,10 +212,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
     }
 
     private void initConfig() {
-        // 0.1.127：Python 预热与配置加载并行——后台线程先把 Python 解释器起起来
-        // （BaseLoader.warmupPython），盖掉冷启动里 Python 启动那 ~15 秒里解释器
-        // 启动的部分；预热失败静默，第一次建爬虫时再启动，不影响正常流程。
-        Task.execute(() -> BaseLoader.get().warmupPython());
+        // 0.1.129：Python 预热已挪到 App.onCreate（进程一启动就开始起），这里不再重复调。
         // 0.1.127：开机按当前接口加载（文件夹接口走轻量路，不拉上一个在线配置）。
         ConfigManager.loadVodOnBoot(getCallback());
         LiveConfig.get().init().load();

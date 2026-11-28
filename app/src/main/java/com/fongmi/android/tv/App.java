@@ -17,6 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.core.os.HandlerCompat;
 import androidx.media3.mpvplayer.MpvLibrary;
 
+import com.fongmi.android.tv.api.loader.BaseLoader;
 import com.fongmi.android.tv.player.mpv.MpvUtil;
 import com.fongmi.android.tv.receiver.RuntimeReceiver;
 import com.fongmi.android.tv.setting.Setting;
@@ -26,6 +27,7 @@ import com.fongmi.android.tv.utils.RuntimeInstaller;
 import com.fongmi.hook.Hook;
 import com.github.catvod.Runtime;
 import com.github.catvod.utils.RuntimeModule;
+import com.github.catvod.utils.Task;
 import com.google.gson.Gson;
 
 import java.io.IOException;
@@ -99,6 +101,12 @@ public class App extends Application implements Application.ActivityLifecycleCal
         super.onCreate();
         Setting.applyThemeMode();
         initRuntime();
+        // 0.1.129：Python 预热挪到进程启动最早处——后台线程在 App.onCreate 里就开始起
+        // Python 解释器（BaseLoader.warmupPython），到首页拉取时已经就绪；原来放在
+        // HomeActivity.initConfig 里，和配置加载（约 4 秒）并行，配置完、首页请求开始时
+        // Python 还差约 11 秒才起好，首页请求的 30 秒超时预算被 Python 启动吃掉，慢 VPN
+        // 下直接超时变空白。预热失败静默（warmupPython 已 catch Throwable），不影响启动。
+        Task.execute(() -> BaseLoader.get().warmupPython());
         Notify.createChannel();
         registerActivityLifecycleCallbacks(this);
     }

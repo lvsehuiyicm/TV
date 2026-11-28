@@ -130,8 +130,17 @@ public class SiteViewModel extends ViewModel {
         }, error -> {
             removeHomeFuture(future);
             if (error instanceof CancellationException) return;
-            if (epoch == homeEpoch.get() && isCurrentHome(home)) handleError(TaskType.RESULT, result, error);
-            else error.printStackTrace();
+            if (epoch == homeEpoch.get() && isCurrentHome(home)) {
+                // 0.1.129：拉取失败/超时不清空首页——当前首页源有缓存（内存或磁盘）时
+                // 留着缓存内容，只 toast 一句；只有内存和磁盘都没有当前源缓存时，
+                // 才按原来那样 post error/empty。判断以当前首页源的 key 为准，不拿错源的缓存顶。
+                if (hasHomeCache(key)) {
+                    App.post(() -> Notify.show(ResUtil.getString(R.string.error_home_keep_cache)));
+                    error.printStackTrace();
+                } else {
+                    handleError(TaskType.RESULT, result, error);
+                }
+            } else error.printStackTrace();
         }), MoreExecutors.directExecutor());
     }
 
@@ -144,6 +153,28 @@ public class SiteViewModel extends ViewModel {
     private static boolean isCurrentHome(Site home) {
         Site current = VodConfig.get().getHome();
         return current != null && home != null && current.getKey().equals(home.getKey());
+    }
+
+    /**
+     * 0.1.129：当前首页源在内存缓存或磁盘缓存里有没有内容。key 必须是当前首页源的
+     * homeCacheKey（activeId + 首页源 key），不错源。拉取失败/超时时用它决定要不要
+     * post error/empty——有缓存就留着缓存内容。磁盘读是同步的，只在后台线程的失败
+     * 回调里调，不在主线程调。
+     */
+    private boolean hasHomeCache(String key) {
+        if (homeCache.get(key) != null) return true;
+        return HomeResultCache.get(key) != null;
+    }
+
+    /**
+     * 0.1.129：当前首页源在内存缓存里有没有可立即显示的内容。
+     * VodFragment.homeContent() 用它决定：新源没有内存缓存时，先清掉界面上旧源的内容
+     * （只留转圈），免得错源海报一直留着；有内存缓存时不清，缓存秒出直接替换。
+     * 只看内存——磁盘读是异步的，等它到了再贴，中间那一下旧内容不能留。
+     */
+    public boolean hasHomeMemoryCache() {
+        Site home = VodConfig.get().getHome();
+        return home != null && homeCache.get(homeCacheKey(home)) != null;
     }
 
     /**

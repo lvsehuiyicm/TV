@@ -403,9 +403,18 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         exitFocused();
         showProgress();
         setFabVisible();
-        // 0.1.126：这里不再先 clear() 两个 adapter。旧首页留着，等新数据到了 setAdapter
-        // 再整体替换（addAll 现在先清后加）。以前配置加载完、首页数据还没回来就先清空，
-        // 又是一段空白。
+        // 0.1.129：新首页源没有内存缓存可立即显示时，先清掉界面上旧源的内容（只留转圈），
+        // 免得错源海报一直留着（启动时豆瓣海报闪过、切源后旧源内容留 30 秒，都是这个原因）。
+        // 切回已打开过的源时有内存缓存，不清，缓存秒出直接替换旧内容。
+        // 0.1.126 的“切 tab 不藏旧首页”只在有缓存可立即替换时才成立，没缓存时旧内容是错源的，不能留。
+        if (!mViewModel.hasHomeMemoryCache()) {
+            mAdapter.clear();
+            mSectionAdapter.clear();
+            mResult = null;
+        }
+        // 0.1.126：有内存缓存时这里不先 clear() 两个 adapter。旧首页留着，等新数据到了
+        // setAdapter 再整体替换（addAll 现在先清后加）。以前配置加载完、首页数据还没回来
+        // 就先清空，又是一段空白。没内存缓存时上面已经清过了（旧内容是错源的，不能留）。
         mAutoFirst = true;
         mViewModel.homeContent();
     }

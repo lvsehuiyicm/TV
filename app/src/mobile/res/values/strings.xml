@@ -202,6 +202,7 @@
     <string name="config_refs_no_perm">Can\'t read %1$d referenced files (%2$s): turn on All files access first, then delete and re-import this package</string>
     <string name="config_refs_missing">This package is missing %1$d files: %2$s</string>
     <string name="config_refs_unknown">This package was imported as a copy and its referenced files may be missing: turn on All files access first, then delete and re-import it</string>
+    <string name="error_home_keep_cache">Failed to load, showing the previous content</string>
     <string name="config_bad_live">Please choose a .txt or .m3u file</string>
     <string name="config_folder_exists">This folder is already added</string>
     <string name="config_file_exists">This file is already added</string>
